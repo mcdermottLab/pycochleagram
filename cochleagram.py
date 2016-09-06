@@ -77,56 +77,23 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None, downsample
     subband_envelopes = np.abs(analytic_subbands)
 
     if pad_factor is not None and pad_factor >= 1:
-        analytic_subbands = analytic_subbands[:, :signal.shape[0]-padding]  # i dont know if this is correct
-        subband_envelopes = subband_envelopes[:, :signal.shape[0]-padding]  # i dont know if this is correct
+      analytic_subbands = analytic_subbands[:, :signal.shape[0]-padding]  # i dont know if this is correct
+      subband_envelopes = subband_envelopes[:, :signal.shape[0]-padding]  # i dont know if this is correct
 
-    # DOWNSAMPLING BEFORE NONLINEARITY
-    # was BadCoefficients error with Chebyshev type I filter [default]
-    #   resample uses a fourier method and is needlessly long...
-    if downsample is None:
-      pass
-    elif callable(downsample):
-      # apply the downsampling function
-      subband_envelopes = downsample(subband_envelopes)
-    else:
-      SR = 20000
-      # assume that downsample is the downsampling factor
-      # subband_envelopes = scipy.signal.decimate(subband_envelopes, downsample, axis=1, ftype='fir') # this caused weird banding artifacts
-      subband_envelopes = scipy.signal.resample(subband_envelopes, np.ceil(subband_envelopes.shape[1]*(6000/SR)), axis=1)  # fourier method: this causes NANs that get converted to 0s
-      # subband_envelopes = scipy.signal.resample_poly(subband_envelopes, 6000, SR, axis=1)  # this requires v0.18 of scipy
-    subband_envelopes[subband_envelopes < 0] = 0
+    subband_envelopes = apply_envelope_downsample(subband_envelopes, downsample)
+    subband_envelopes = apply_envelope_nonlinearity(subband_envelopes, nonlinearity)
 
+    # ## now just return things
+    # if get_analytic_subbands_too and do_return_envs:
+    #   return subband_envelopes, analytic_subbands
+    # elif get_analytic_subbands_too:
+    #   return subbands, analytic_subbands
+    # elif do_return_envs:
+    #   return subband_envelopes
+    # else:
+    #     raise NotImplementedError()
 
-    # apply nonlinearity
-    if nonlinearity is None:
-      pass
-    elif nonlinearity == "power":
-      subband_envelopes = np.power(subband_envelopes, 3.0 / 10.0)  # from Alex's code
-    elif nonlinearity == "log":
-      print(subband_envelopes.dtype)
-      dtype_eps = np.finfo(subband_envelopes.dtype).eps
-      # subband_envelopes[subband_envelopes <= 0] += dtype_eps
-      subband_envelopes[subband_envelopes == 0] = dtype_eps
-      # subband_envelopes = np.log(subband_envelopes)  # adapted from Alex's code
-      subband_envelopes = 20 * np.log10(subband_envelopes / np.max(subband_envelopes))  # adapted from Anastasiya's code
-      # a = subband_envelopes / np.max(subband_envelopes)
-      # a[a <= 0] = dtype_eps
-      # subband_envelopes = 20 * np.log10(a)  # adapted from Anastasiya's code
-    elif callable(nonlinearity):
-      subband_envelopes = nonlinearity(subband_envelopes)
-    else:
-      raise ValueError('argument "nonlinearity" must be "power", "log", or a function.')
-
-    ## now just return things
-    if get_analytic_subbands_too and do_return_envs:
-        return subband_envelopes, analytic_subbands
-    elif get_analytic_subbands_too:
-        return subbands, analytic_subbands
-    elif do_return_envs:
-        return subband_envelopes
-    else:
-        raise NotImplementedError()
-        # return subbands
+    return subband_envelopes
 
 
 def generate_subbands(signal, filters, pad_factor=None):
@@ -172,45 +139,6 @@ def generate_subband_envelopes(signal, filters, pad_factor=None, downsample=None
   analytic_subbands = generate_analytic_subbands(signal, filters, pad_factor=pad_factor)
   subband_envelopes = np.abs(analytic_subbands)
   print(subband_envelopes.min(), ', ', subband_envelopes.max())
-  # plt.matshow(np.flipud(subband_envelopes), cmap='inferno')
-  # plt.show()
-
-  # # DOWNSAMPLING BEFORE NONLINEARITY
-  # # was BadCoefficients error with Chebyshev type I filter [default]
-  # #   resample uses a fourier method and is needlessly long...
-  # if downsample is None:
-  #   pass
-  # elif callable(downsample):
-  #   # apply the downsampling function
-  #   subband_envelopes = downsample(subband_envelopes)
-  # else:
-  #   SR = 20000
-  #   # assume that downsample is the downsampling factor
-  #   # subband_envelopes = scipy.signal.decimate(subband_envelopes, downsample, axis=1, ftype='fir') # this caused weird banding artifacts
-  #   subband_envelopes = scipy.signal.resample(subband_envelopes, np.ceil(subband_envelopes.shape[1]*(6000/SR)), axis=1)  # fourier method: this causes NANs that get converted to 0s
-  #   # subband_envelopes = scipy.signal.resample_poly(subband_envelopes, 6000, SR, axis=1)  # this requires v0.18 of scipy
-  # subband_envelopes[subband_envelopes < 0] = 0
-
-
-  # # apply nonlinearity
-  # if nonlinearity is None:
-  #   pass
-  # elif nonlinearity == "power":
-  #   subband_envelopes = np.power(subband_envelopes, 3.0 / 10.0)  # from Alex's code
-  # elif nonlinearity == "log":
-  #   print(subband_envelopes.dtype)
-  #   dtype_eps = np.finfo(subband_envelopes.dtype).eps
-  #   # subband_envelopes[subband_envelopes <= 0] += dtype_eps
-  #   subband_envelopes[subband_envelopes == 0] = dtype_eps
-  #   # subband_envelopes = np.log(subband_envelopes)  # adapted from Alex's code
-  #   subband_envelopes = 20 * np.log10(subband_envelopes / np.max(subband_envelopes))  # adapted from Anastasiya's code
-  #   # a = subband_envelopes / np.max(subband_envelopes)
-  #   # a[a <= 0] = dtype_eps
-  #   # subband_envelopes = 20 * np.log10(a)  # adapted from Anastasiya's code
-  # elif callable(nonlinearity):
-  #   subband_envelopes = nonlinearity(subband_envelopes)
-  # else:
-  #   raise ValueError('argument "nonlinearity" must be "power", "log", or a function.')
 
   subband_envelopes = apply_envelope_downsample(subband_envelopes, downsample)
   subband_envelopes = apply_envelope_nonlinearity(subband_envelopes, nonlinearity)
@@ -268,7 +196,7 @@ def apply_envelope_nonlinearity(subband_envelopes, nonlinearity):
 
 def make_cochleagram_ray():
   DUR = 50 / 1000
-  SR = 20000
+  SR = 20001
   LOW_LIM = 50
   HI_LIM = 20000
   N_HUMAN = np.floor(freq2erb(HI_LIM) - freq2erb(LOW_LIM)) - 1;
@@ -292,7 +220,8 @@ def make_cochleagram_ray():
   # filts, hz_cutoffs, freqs = make_erb_cos_filters(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM, full_filter=True, strict=False)
 
   downsample_fx = lambda x: scipy.signal.resample_poly(x, 6000, SR, axis=1)
-  sub_envs = generate_subband_envelopes(ct, filts, pad_factor=PAD_FACTOR, downsample=downsample_fx, nonlinearity='log')
+  # sub_envs = generate_subband_envelopes(ct, filts, pad_factor=PAD_FACTOR, downsample=downsample_fx, nonlinearity='log')
+  sub_envs = generate_subband_envelopes_fast(ct, filts, pad_factor=PAD_FACTOR, downsample=downsample_fx, nonlinearity='log')
 
   # img = np.flipud(sub_envs.T)
   img = np.flipud(sub_envs)
