@@ -72,7 +72,7 @@ def make_full_filter_set(filts, signal_length):
   return fft_filts
 
 
-def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor, full_filter=True, strict=True):
+def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor, pad_factor=None, full_filter=True, strict=True):
   """ Create ERB cosine filters, oversampled by a factor provided by "sample_factor"
   """
   if not isinstance(sample_factor, int):
@@ -86,6 +86,9 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
       raise ValueError(msg)
     else:
       warnings.warn(msg, RuntimeWarning, stacklevel=2)
+
+  if pad_factor is not None and pad_factor >= 1:
+    signal_length *= pad_factor
 
   if np.remainder(signal_length, 2) == 0:  # even length
     n_freqs = signal_length / 2  # .0 does not include DC, likely the sampling grid
