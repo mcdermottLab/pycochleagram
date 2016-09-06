@@ -3,8 +3,6 @@ from __future__ import division
 from __future__ import print_function
 
 import warnings
-import math
-import scipy
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -86,7 +84,7 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
   n_filters = sample_factor * (n + 1) - 1
   n_lp_hp = 2 * sample_factor
   freqs = utils.matlab_arange(0, max_freq, n_freqs)
-  cos_filts = np.zeros((n_freqs + 1 , n_filters + n_lp_hp))  # ?? n_freqs+1
+  filts = np.zeros((n_freqs + 1 , n_filters + n_lp_hp))  # ?? n_freqs+1
 
   # cutoffs are evenly spaced on an erb scale -- interpolate linearly in erb space then convert back
   # erb_spacing = (freq2erb(hi_lim) - freq2erb(low_lim)) / (n_filters + 1)
@@ -97,42 +95,32 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
   center_freqs = center_freqs[1:-1]
   # assert erb_spacing == erb_spacing0, 'ERB spacing mismatch'
 
-  print(center_freqs)
-  print('sample_factor: ', sample_factor)
   for i in range(n_filters):
     i_offset = i + sample_factor
     l = erb2freq(center_freqs[i] - sample_factor * erb_spacing)
     h = erb2freq(center_freqs[i] + sample_factor * erb_spacing)
-    print('i: %s, l, h: [%s, %s]' % (i, l, h))
-    ## Ray 2 ##
-    temp_cos_filts = make_cosine_filter(freqs, l, h)
-    print(temp_cos_filts.shape)
-    # the first sample_factor # of rows in cos_filts will be lowpass filters
-    cos_filts[(freqs > l) & (freqs < h), i_offset] = temp_cos_filts
+    # print('i: %s, l, h: [%s, %s]' % (i, l, h))
+    # the first sample_factor # of rows in filts will be lowpass filters
+    filts[(freqs > l) & (freqs < h), i_offset] = make_cosine_filter(freqs, l, h)
 
 
-  # make lowpass and highpass filters for perfect reconstruction
-  # there should be sample_factor number of both low-pass and high pass filters
-  # lp_filts = np.zeros((cos_filts.shape[0], sample_factor))
-  # hp_filts = np.zeros((cos_filts.shape[0], sample_factor))
+  # make lowpass and highpass filters for perfect reconstruction - there should
+  # be sample_factor number of each
   for i in range(sample_factor):
     # account for the fact that the first sample_factor # of filts are lowpass
     i_offset = i + sample_factor
-    print('lp/hp inds: [%s, %s]' % (i_offset, -1-i_offset))
+    # print('lp/hp inds: [%s, %s]' % (i_offset, -1-i_offset))
     lp_h_ind = max(np.where(freqs < erb2freq(center_freqs[0]))[0])  # lowpass filter goes up to peak of first cos filter
-    lp_filt = np.sqrt( 1 - np.power(cos_filts[:lp_h_ind+1, i_offset], 2))
-    # lp_filts[:lp_h_ind+1, i] = lp_filt
+    lp_filt = np.sqrt(1 - np.power(filts[:lp_h_ind+1, i_offset], 2))
 
     hp_l_ind = min(np.where(freqs > erb2freq(center_freqs[-1-i]))[0])  # highpass filter goes down to peak of last cos filter
-    hp_filt = np.sqrt(1 - np.power(cos_filts[hp_l_ind:, -1-i_offset], 2))
-    # hp_filts[hp_l_ind:, -1-i] = hp_filt
+    hp_filt = np.sqrt(1 - np.power(filts[hp_l_ind:, -1-i_offset], 2))
 
-    cos_filts[:lp_h_ind+1, i] = lp_filt
-    cos_filts[hp_l_ind:, -1-i] = hp_filt
+    filts[:lp_h_ind+1, i] = lp_filt
+    filts[hp_l_ind:, -1-i] = hp_filt
 
-  # cos_filts = np.hstack((lp_filts, cos_filts, hp_filts))
-
-  cos_filts = cos_filts / np.sqrt(sample_factor)  # so that squared freq response adds to one
+  # ensure that squared freq response adds to one
+  filts = filts / np.sqrt(sample_factor)
 
   # get center freqs for lowpass and highpass filters
   cfs_low = np.copy(center_freqs[:sample_factor]) - sample_factor * erb_spacing
@@ -140,14 +128,14 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
   center_freqs = erb2freq(np.concatenate((cfs_low, center_freqs, cfs_hi)))
 
   # rectify
-  # center_freqs[center_freqs < 0] = 1
+  center_freqs[center_freqs < 0] = 1
 
   # flip thing
 
-  plt.plot(cos_filts)
+  plt.plot(filts)
   plt.show()
 
-  return cos_filts, center_freqs, freqs
+  return filts, center_freqs, freqs
 
 
 def make_erb_cos_filters_1x(signal_length, sr, low_lim, hi_lim, strict=True):
@@ -212,123 +200,33 @@ def make_erb_cos_filters(signal_length, sr, n, low_lim, hi_lim, strict=True):
       raise ValueError('input arg "hi_lim" exceeds nyquist limit for max '
                        'frequency ignore with "strict=False"')
 
-
-  # make cutoffs evenly spaced on an erb scale
-  # cutoffs = erb2freq([freq2erb(low_lim) : (freq2erb(hi_lim)-freq2erb(low_lim))/(n+1) : freq2erb(hi_lim)])
-
-  # # cutoffs are evenly spaced on an erb scale -- interpolate linearly in erb space then convert back
-  # erb_spacing = (freq2erb(hi_lim)-freq2erb(low_lim))/(n+1)
-  # center_freqs = np.linspace(freq2erb(low_lim)+erb_spacing, freq2erb(hi_lim)-erb_spacing, n)
-  # cutoffs = erb2freq(center_freqs)
-
   # cutoffs are evenly spaced on an erb scale -- interpolate linearly in erb space then convert back
-  # cutoffs_in_erb = np.linspace(freq2erb(low_lim), freq2erb(hi_lim), n+2)
   cutoffs_in_erb = utils.matlab_arange(freq2erb(low_lim), freq2erb(hi_lim), n + 1)  # ?? n+1
   cutoffs = erb2freq(cutoffs_in_erb)
 
-  plt.figure()
-  plt.show(block=False)
-  ax = plt.gca()
   # generate cosine filters
   for k in range(n):
     l = cutoffs[k]
     h = cutoffs[k + 2]  # adjacent filters overlap by 50%
-    # print(l, h)
-    # print(freqs.shape)
     l_ind = min(np.where(freqs > l)[0])
     h_ind = max(np.where(freqs < h)[0])
-    print('RAY: ', l_ind, ' | ', h_ind)
-
-    a_l_ind = np.nonzero(freqs > l)[0][0]  # hacky min
-    a_h_ind = np.nonzero(freqs < h)[-1][-1]  # hacky max
-    print('ALEX: ', a_l_ind, ' | ', a_h_ind)
-    assert a_l_ind == l_ind
-    assert a_h_ind == h_ind
-
-    # ax.plot(test_freqs)
-    # plt.draw()
-    # plt.waitforbuttonpress()
-
-    # if k == 5:
-    #   exit()
-
     avg = (freq2erb(l) + freq2erb(h)) / 2  # center of filter?
     rnge = freq2erb(h) - freq2erb(l)  # width of filter
-
-    # cos_filts[(freqs > l) & (freqs < h), k] = np.cos( (freq2erb(freqs[(freqs > l) & (freqs < h)]) - avg)/rnge * np.pi)
-    # xx = np.cos( (freq2erb(freqs[(freqs > l) & (freqs < h)]) - avg)/rnge * np.pi)
-    xx = make_cosine_filter(freqs, l, h)
-    cos_filts[(freqs > l) & (freqs < h), k] = xx
-
-    # a_cos_filts[a_l_ind:a_h_ind+1,k] = np.cos( (freq2erb(freqs[a_l_ind:a_h_ind+1]) - avg)/rnge * np.pi)
-    axx = np.cos((freq2erb(freqs[a_l_ind:a_h_ind+1]) - avg)/rnge * np.pi)  # h_ind+1 to include endpoint
-    a_cos_filts[a_l_ind:a_h_ind+1,k] = axx
-    print(":CAT", a_cos_filts[a_l_ind:a_h_ind+1,k].shape)
-
-    # ax.plot(xx, c='r', marker='D')
-    # plt.draw()
-    # ax.plot(axx, c='b', marker='+')
-    # plt.draw()
-    # plt.waitforbuttonpress()
-    assert np.all(xx == axx)
-
-  print(cos_filts.shape)
+    cos_filts[l_ind:h_ind+1,k] = np.cos((freq2erb(freqs[l_ind:h_ind+1]) - avg)/rnge * np.pi)  # h_ind+1 to include endpoint
 
   # add lowpass and highpass for perfect reconstruction
   filts = np.zeros((n_freqs + 1, n + 2))
   filts[:,1:n+1] = cos_filts
-  print(cos_filts[:,:1].shape)
   lp_filt = np.zeros_like(cos_filts[:, :0])
   hp_filt = np.copy(lp_filt)
-
-  h_ind = max(np.where(freqs < cutoffs[1])[0])  # lowpass filter goes up to peak of first cos filter
-  l_ind = min(np.where(freqs > cutoffs[n])[0])  # lowpass filter goes up to peak of first cos filter
-  a_h_ind = np.nonzero(freqs<cutoffs[1])[-1][-1]  # hacky max
-  a_l_ind = np.nonzero(freqs>cutoffs[n])[0][0] # hacky min
-  assert(a_h_ind == h_ind)
-  assert(a_l_ind == l_ind)
-
-  # filts[:h_ind+1,0] = np.sqrt( 1 - filts[:h_ind+1,1]**2)
-  filts[:h_ind+1, 0] = np.sqrt(1 - np.power(filts[:h_ind+1,1], 2.0))
-  a = freqs > cutoffs[n+1]
-  print('freqs shape', freqs.shape)
-  print('a shape', a.shape)
-  print('cos filts shape', cos_filts.shape)
-  print('filts shape', filts.shape)
-  yy = np.sqrt(1.0 - cos_filts[freqs > cutoffs[n], -1]**2.0)
-  # plt.plot(yy, c='r')
-  filts[l_ind:n_freqs+2,n+1] = np.sqrt(1 - np.power(filts[l_ind:n_freqs+2,n], 2))
-
-  # plt.plot(filts)
-  # plt.plot(filts[l_ind:n_freqs+2,n+1], c='k')
-  # plt.plot(yy, c='k')
-  # plt.plot(filts[:, 0], c='b')
-  # plt.draw()
-  # plt.waitforbuttonpress()
-  # plt.waitforbuttonpress()
-
-  filts = np.hstack((lp_filt, cos_filts, hp_filt))
-  print(filts.shape)
-
 
   # add lowpass and highpass for perfect reconstruction
   filts = np.zeros((n_freqs+1,n+2))
   filts[:,1:n+1] = cos_filts
-  h_ind = np.nonzero(freqs<cutoffs[1])[-1][-1] # hacky max
+  h_ind = max(np.where(freqs < cutoffs[1])[0])  # lowpass filter goes up to peak of first cos filter
   filts[:h_ind+1,0] = np.sqrt( 1 - filts[:h_ind+1,1]**2)
-  l_ind = np.nonzero(freqs>cutoffs[n])[0][0] # hacky min
+  l_ind = min(np.where(freqs > cutoffs[n])[0])  # lowpass filter goes up to peak of first cos filter
   filts[l_ind:n_freqs+2,n+1] = np.sqrt(1.0 - filts[l_ind:n_freqs+2,n]**2.0)
-  plt.plot(filts[l_ind:n_freqs+2,n+1])
-  plt.draw()
-  plt.show()
-
-  print('filts shpae', filts.shape[1])
-  for i in range(filts.shape[1]):
-    print('plotting ',i)
-    plt.plot(filts[:, i])
-    plt.show()
-    plt.waitforbuttonpress()
-    plt.close()
 
   return filts, cutoffs, freqs
 
@@ -342,7 +240,7 @@ def runTests():
   HI_LIM = 20000
   N_HUMAN = np.floor(freq2erb(HI_LIM) - freq2erb(LOW_LIM)) - 1;
   N_HUMAN = N_HUMAN.astype(int)
-  N_HUMAN = 3
+  N_HUMAN = 5
   print('N: ', N_HUMAN)
 
   t = utils.matlab_arange(0, 1, SR)
@@ -350,14 +248,11 @@ def runTests():
 
   print(t.shape)
 
-  # alex_makeErbCosFilts1x(len(ct), SR, n, LOW_LIM, HI_LIM)
-  # make_erb_cos_filters_1x(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM)
-  # make_erb_cos_filters_2x(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM)
   plt.figure()
+  filts0, hz_cutoffs0, freqs0 = make_erb_cos_filters(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM)
   filts, hz_cutoffs, freqs = make_erb_cos_filters_nx(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM, 1)
   filts, hz_cutoffs, freqs = make_erb_cos_filters_nx(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM, 2)
   filts, hz_cutoffs, freqs = make_erb_cos_filters_nx(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM, 4)
-  exit()
 
 
 if __name__ == '__main__':
