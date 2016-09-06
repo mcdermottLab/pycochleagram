@@ -29,19 +29,24 @@ def erb2freq(n_erb):
   """ Converts ERBs to Hz, using the formula of Glasberg and Moore.
 
   Args:
-    n_erb (float)
+    n_erb (int, float)
 
   Returns:
-    freq_hz (int, float)
+    freq_hz (float)
   """
   return 24.7 * 9.265 * (np.exp(n_erb / 9.265) - 1)
 
 
-def make_cosine_filter(freqs, l, h):
-  avg_in_erb = (freq2erb(l) + freq2erb(h)) / 2  # center of filter?
-  rnge_in_erb = freq2erb(h) - freq2erb(l)  # width of filter
+def make_cosine_filter(freqs, l, h, convert_to_erb=True):
+  if convert_to_erb:
+    freqs_erb = freq2erb(freqs)
+    l_erb = freq2erb(l)
+    h_erb = freq2erb(h)
+
+  avg_in_erb = (l_erb + h_erb) / 2  # center of filter
+  rnge_in_erb = h_erb - l_erb  # width of filter
   # return np.cos((freq2erb(freqs[a_l_ind:a_h_ind+1]) - avg)/rnge * np.pi)  # h_ind+1 to include endpoint
-  return np.cos((freq2erb(freqs[(freqs > l) & (freqs < h)]) - avg_in_erb) / rnge_in_erb * np.pi)  # map cutoffs to -pi/2, pi/2 interval
+  return np.cos((freqs_erb[(freqs_erb > l_erb) & (freqs_erb < h_erb)]- avg_in_erb) / rnge_in_erb * np.pi)  # map cutoffs to -pi/2, pi/2 interval
 
 
 def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor, strict=True):
@@ -66,6 +71,7 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
     n_freqs = (signal_length - 1) / 2  # .0
     max_freq = sr * (signal_length - 1) / 2 / signal_length  # just under nyquist
 
+  # verify the high limit is allowed by the sampling rate
   if hi_lim > sr / 2:
     hi_lim = max_freq
     msg = 'input arg "hi_lim" exceeds nyquist limit for max frequency; ignore with "strict=False"'
@@ -74,151 +80,89 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
     else:
       warnings.warn(msg, RuntimeWarning, stacklevel=2)
 
+  # changing the sampling density without changing the filter locations
+  # (and, thereby changing their widths) requires that a certain number of filters
+  # be used.
   n_filters = sample_factor * (n + 1) - 1
+  n_lp_hp = 2 * sample_factor
   freqs = utils.matlab_arange(0, max_freq, n_freqs)
-  cos_filts = np.zeros((n_freqs + 1, n_filters))  # ?? n_freqs+1
+  cos_filts = np.zeros((n_freqs + 1 , n_filters + n_lp_hp))  # ?? n_freqs+1
 
   # cutoffs are evenly spaced on an erb scale -- interpolate linearly in erb space then convert back
-  erb_spacing = (freq2erb(hi_lim) - freq2erb(low_lim)) / (n_filters + 1)
-  center_freqs = np.linspace(freq2erb(low_lim) + erb_spacing, freq2erb(hi_lim) - erb_spacing, n_filters)
+  # erb_spacing = (freq2erb(hi_lim) - freq2erb(low_lim)) / (n_filters + 1)
+  # center_freqs = np.linspace(freq2erb(low_lim) + erb_spacing, freq2erb(hi_lim) - erb_spacing, n_filters)
+  # get the actual spacing use to generate the sequence (in case numpy does something weird)
+  center_freqs, erb_spacing = np.linspace(freq2erb(low_lim), freq2erb(hi_lim), n_filters + 2, retstep=True)  # +2 for bin endpoints
+  # we need to exclude the endpoints
+  center_freqs = center_freqs[1:-1]
+  # assert erb_spacing == erb_spacing0, 'ERB spacing mismatch'
+
   print(center_freqs)
   print('sample_factor: ', sample_factor)
-  for k in range(n_filters):
-    l = erb2freq(center_freqs[k] - sample_factor * erb_spacing)
-    h = erb2freq(center_freqs[k] + sample_factor * erb_spacing)
-    print('k: %s, l, h: [%s, %s]' % (k, l, h))
+  for i in range(n_filters):
+    i_offset = i + sample_factor
+    l = erb2freq(center_freqs[i] - sample_factor * erb_spacing)
+    h = erb2freq(center_freqs[i] + sample_factor * erb_spacing)
+    print('i: %s, l, h: [%s, %s]' % (i, l, h))
     ## Ray 2 ##
-    xx = make_cosine_filter(freqs, l, h)
-    cos_filts[(freqs > l) & (freqs < h), k] = xx
-    ## Ray 1 ##
-    # l_ind = min(np.where(freqs > l)[0])
-    # h_ind = max(np.where(freqs < h)[0])
-    # avg = (freq2erb(l) + freq2erb(h)) / 2  # center of filter?
-    # rnge = freq2erb(h) - freq2erb(l)  # width of filter
-    # cos_filts[l_ind:h_ind+1,k] = np.cos( (freq2erb(freqs[l_ind:h_ind+1]) - avg)/rnge * np.pi)
-    ## Alex ##
-    # l_ind = np.nonzero( freqs>l )[0][0] # hacky min
-    # h_ind = np.nonzero( freqs<h )[-1][-1] # hacky max
-    # avg = (freq2erb(h)+freq2erb(l))/2
-    # rnge = freq2erb(h)-freq2erb(l)
-    # cos_filts[l_ind:h_ind+1,k] = np.cos( (freq2erb(freqs[l_ind:h_ind+1]) - avg)/rnge * np.pi)
+    temp_cos_filts = make_cosine_filter(freqs, l, h)
+    print(temp_cos_filts.shape)
+    # the first sample_factor # of rows in cos_filts will be lowpass filters
+    cos_filts[(freqs > l) & (freqs < h), i_offset] = temp_cos_filts
+
 
   # make lowpass and highpass filters for perfect reconstruction
   # there should be sample_factor number of both low-pass and high pass filters
-  lp_filts = np.zeros((cos_filts.shape[0], sample_factor))
-  hp_filts = np.zeros((cos_filts.shape[0], sample_factor))
+  # lp_filts = np.zeros((cos_filts.shape[0], sample_factor))
+  # hp_filts = np.zeros((cos_filts.shape[0], sample_factor))
   for i in range(sample_factor):
-    print('lp/hp inds: [%s, %s]' % (i, -1-i))
+    # account for the fact that the first sample_factor # of filts are lowpass
+    i_offset = i + sample_factor
+    print('lp/hp inds: [%s, %s]' % (i_offset, -1-i_offset))
     lp_h_ind = max(np.where(freqs < erb2freq(center_freqs[0]))[0])  # lowpass filter goes up to peak of first cos filter
-    lp_filts[:lp_h_ind+1, i] = np.sqrt( 1 - np.power(cos_filts[:lp_h_ind+1, i], 2))
+    lp_filt = np.sqrt( 1 - np.power(cos_filts[:lp_h_ind+1, i_offset], 2))
+    # lp_filts[:lp_h_ind+1, i] = lp_filt
 
     hp_l_ind = min(np.where(freqs > erb2freq(center_freqs[-1-i]))[0])  # highpass filter goes down to peak of last cos filter
-    hp_filts[hp_l_ind:, -1-i] = np.sqrt(1 - np.power(cos_filts[hp_l_ind:, -1-i], 2))
-    # plt.plot(np.sqrt(1 - np.power(cos_filts[hp_l_ind:, -1-i], 2)), marker='+')
-    # plt.plot(hp_filts[hp_l_ind:, -1-i], marker='+')
-    # plt.show()
+    hp_filt = np.sqrt(1 - np.power(cos_filts[hp_l_ind:, -1-i_offset], 2))
+    # hp_filts[hp_l_ind:, -1-i] = hp_filt
 
-  cos_filts = np.hstack((lp_filts, cos_filts, hp_filts))
+    cos_filts[:lp_h_ind+1, i] = lp_filt
+    cos_filts[hp_l_ind:, -1-i] = hp_filt
 
-  cos_filts = cos_filts / np.sqrt(sample_factor) # so that squared freq response adds to one
+  # cos_filts = np.hstack((lp_filts, cos_filts, hp_filts))
 
-  # get center freqs
+  cos_filts = cos_filts / np.sqrt(sample_factor)  # so that squared freq response adds to one
+
+  # get center freqs for lowpass and highpass filters
   cfs_low = np.copy(center_freqs[:sample_factor]) - sample_factor * erb_spacing
   cfs_hi = np.copy(center_freqs[-sample_factor:]) + sample_factor * erb_spacing
-  center_freqs = erb2freq( np.concatenate((cfs_low, center_freqs, cfs_hi)) )
-  print(center_freqs.shape)
+  center_freqs = erb2freq(np.concatenate((cfs_low, center_freqs, cfs_hi)))
 
   # rectify
-  center_freqs[center_freqs < 0] = 1
+  # center_freqs[center_freqs < 0] = 1
 
   # flip thing
 
-  print('filts shpae', cos_filts.shape[1])
-  print('hz cutoffs')
-  print(center_freqs)
-  # for i in range(cos_filts.shape[1]):
-  #   print('plotting ',i)
-  #   plt.plot(cos_filts[:, i])
-  #   # plt.draw()
-  #   # plt.waitforbuttonpress()
   plt.plot(cos_filts)
   plt.show()
 
-
-  return cos_filts, center_freqs, freqs
-
-def make_erb_cos_filters_2x(signal_length, sr, N, low_lim, hi_lim, strict=True):
-  # doubling density
-  N = 2*N+1
-
-  if np.remainder(signal_length, 2) == 0:  # even length
-    n_freqs = signal_length / 2  # .0 does not include DC, likely the sampling grid
-    max_freq = sr / 2  # go all the way to nyquist
-  else:  # odd length
-    n_freqs = (signal_length - 1) / 2  # .0
-    max_freq = sr * (signal_length - 1) / 2 / signal_length  # just under nyquist
-
-  if hi_lim > sr / 2:
-    hi_lim = max_freq
-    msg = 'input arg "hi_lim" exceeds nyquist limit for max frequency; ignore with "strict=False"'
-    if strict:
-      raise ValueError(msg)
-    else:
-      warnings.warn(msg, RuntimeWarning, stacklevel=2)
-
-  freqs = np.arange(0,max_freq,float(max_freq)/n_freqs)
-  cos_filts = np.zeros((n_freqs+1,N))
-
-  # cutoffs are evenly spaced on an erb scale -- interpolate linearly in erb space then convert back
-  erb_spacing = (freq2erb(hi_lim)-freq2erb(low_lim))/(N+1)
-  center_freqs = np.linspace(freq2erb(low_lim)+erb_spacing, freq2erb(hi_lim)-erb_spacing, N)
-  # cutoffs = erb2freq(cutoffs_in_erb)
-
-  for k in range(N):
-      l = erb2freq(center_freqs[k]-2*erb_spacing)
-      h = erb2freq(center_freqs[k]+2*erb_spacing)
-      l_ind = np.nonzero( freqs>l )[0][0] # hacky min
-      h_ind = np.nonzero( freqs<h )[-1][-1] # hacky max
-      avg = (freq2erb(h)+freq2erb(l))/2
-      rnge = freq2erb(h)-freq2erb(l)
-      cos_filts[l_ind:h_ind+1,k] = np.cos( (freq2erb(freqs[l_ind:h_ind+1]) - avg)/rnge * np.pi)
-
-  # add space for two lowpass and highpass for perfect reconstruction
-  filts = np.zeros((n_freqs+1,N+4))
-  filts[:,2:N+2] = cos_filts
-
-  # 2 low-pass filters: up to peak of first, peak of second
-  h_ind = np.nonzero(freqs<erb2freq(center_freqs[0]))[-1][-1] # hacky max
-  filts[:h_ind+1,0] = np.sqrt( 1 - filts[:h_ind+1,2]**2)
-  h_ind = np.nonzero(freqs<erb2freq(center_freqs[1]))[-1][-1] # hacky max
-  filts[:h_ind+1,1] = np.sqrt( 1 - filts[:h_ind+1,3]**2)
-
-  # 2 high-pass filters: down to peaks of last and second to last
-  l_ind = np.nonzero(freqs>erb2freq(center_freqs[-1]))[0][0] # hacky min
-  filts[l_ind:n_freqs+2,-1] = np.sqrt(1 - filts[l_ind:n_freqs+2,-3]**2)
-  l_ind = np.nonzero(freqs>erb2freq(center_freqs[-2]))[0][0] # hacky min
-  filts[l_ind:n_freqs+2,-2] = np.sqrt(1 - filts[l_ind:n_freqs+2,-4]**2)
-
-  filts = filts/np.sqrt(2.0) # so that squared freq response adds to one
-
-  # # note that now filters are such that each ROW is a filter and COLUMN idxs freq
-  # if np.remainder(signal_length,2)==0:
-  #     # even -- don't take the DC & don't double sample nyquist
-  #     fft_filts = np.concatenate( (filts.T, np.fliplr(filts[1:filts.shape[0]-1,:].T)), 1)
-  # else: # odd -- don't take the DC
-  #     fft_filts = np.concatenate( (filts.T, np.fliplr(filts[1:filts.shape[0],:].T)), 1)
-
-  cfs_low = np.copy(center_freqs[:2]) - 2.0*erb_spacing
-  cfs_hi = np.copy(center_freqs[-2:]) + 2.0*erb_spacing
-  center_freqs = erb2freq( np.concatenate((cfs_low, center_freqs, cfs_hi)) )
-
-  plt.plot(filts)
-  # plt.show()
-
   return cos_filts, center_freqs, freqs
 
 
-def make_erb_cos_filters_1x(signal_length, sr, n, low_lim, hi_lim, strict=True):
+def make_erb_cos_filters_1x(signal_length, sr, low_lim, hi_lim, strict=True):
+  return make_erb_cos_filters_nx(signal_length, sr, 1, low_lim, hi_lim, strict=strict)
+
+
+def make_erb_cos_filters_2x(signal_length, sr, low_lim, hi_lim, strict=True):
+  return make_erb_cos_filters_nx(signal_length, sr, 2, low_lim, hi_lim, strict=strict)
+
+
+def make_erb_cos_filters_4x(signal_length, sr, low_lim, hi_lim, strict=True):
+  return make_erb_cos_filters_nx(signal_length, sr, 4, low_lim, hi_lim, strict=strict)
+
+
+def make_erb_cos_filters(signal_length, sr, n, low_lim, hi_lim, strict=True):
   """ Returns n+2 filters as ??column vectors of FILTS
 
   filters have cosine-shaped frequency responses, with center frequencies
@@ -389,80 +333,6 @@ def make_erb_cos_filters_1x(signal_length, sr, n, low_lim, hi_lim, strict=True):
   return filts, cutoffs, freqs
 
 
-def alex_makeErbCosFilts1x(signal_length, sr, n, low_lim, hi_lim):
-    """
-    adapted from jhm's make_erb_cos_filters.m
-
-    makes n_filters+2 filters
-    adjacent filters overlap by 50%
-
-    <_fft_filts> has the cosine-shaped frequency-spaced filters
-      each column is a filter, each row represents frequency
-    """
-    # if do_zeropad_before_fft:
-    #     signal_length *= 2
-
-    # using the formula of Glasberg and Moore.
-    freq2erb = lambda freq_Hz: 9.265*np.log(1+freq_Hz/(24.7*9.265))
-    erb2freq = lambda n_erb: 24.7*9.265*(np.exp(n_erb/9.265)-1)
-
-    if np.remainder(signal_length,2)==0: # even length
-        n_freqs = signal_length/2 #.0
-        max_freq = sr/2 # go all the way to nyquist
-    else:
-        n_freqs = (signal_length-1)/2 #.0
-        max_freq = sr*(signal_length-1)/2/signal_length # just under nyquist
-
-    freqs = np.arange(0,max_freq,float(max_freq)/n_freqs)
-    cos_filts = np.zeros((n_freqs+1,n))
-
-    print(freqs.shape)
-    print(cos_filts.shape)
-    exit()
-
-    if hi_lim>sr/2:
-        hi_lim = max_freq
-
-    # cutoffs are evenly spaced on an erb scale -- interpolate linearly in erb space then convert back
-    cutoffs_in_erb = np.linspace(freq2erb(low_lim), freq2erb(hi_lim), n+2)
-    cutoffs = erb2freq(cutoffs_in_erb)
-
-    # plt.plot(cutoffs)
-    # plt.show()
-
-    for k in range(n):
-        l = cutoffs[k]
-        h = cutoffs[k+2]
-        l_ind = np.nonzero( freqs>l )[0][0] # hacky min
-        h_ind = np.nonzero( freqs<h )[-1][-1] # hacky max
-        avg = (freq2erb(h)+freq2erb(l))/2
-        rnge = freq2erb(h)-freq2erb(l)
-        cos_filts[l_ind:h_ind+1,k] = np.cos( (freq2erb(freqs[l_ind:h_ind+1]) - avg)/rnge * np.pi)
-
-    # add lowpass and highpass for perfect reconstruction
-    filts = np.zeros((n_freqs+1,n+2))
-    filts[:,1:n+1] = cos_filts
-    h_ind = np.nonzero(freqs<cutoffs[1])[-1][-1] # hacky max
-    filts[:h_ind+1,0] = np.sqrt( 1 - filts[:h_ind+1,1]**2)
-    l_ind = np.nonzero(freqs>cutoffs[n])[0][0] # hacky min
-    filts[l_ind:n_freqs+2,n+1] = np.sqrt(1.0 - filts[l_ind:n_freqs+2,n]**2.0)
-
-    # # note that now filters are such that each ROW is a filter and COLUMN idxs freq
-    # if np.remainder(signal_length,2)==0:
-    #     # even -- don't take the DC & don't double sample nyquist
-    #     fft_filts = np.concatenate( (filts.T, np.fliplr(filts[1:filts.shape[0]-1,:].T)), 1)
-    # else: # odd -- don't take the DC
-    #     fft_filts = np.concatenate( (filts.T, np.fliplr(filts[1:filts.shape[0],:].T)), 1)
-
-    # # _Hz_cutoffs = cutoffs
-    # _fft_filts = fft_filts
-    # _filt_freqs = freqs
-
-    plt.plot(filts, c='b')
-
-    plt.plot(cos_filts, c='r')
-    plt.show()
-
 def runTests():
   import matplotlib.pyplot as plt
   # generates filters with cosine frequency response functions on an erb-transformed frequency axis
@@ -486,9 +356,9 @@ def runTests():
   plt.figure()
   filts, hz_cutoffs, freqs = make_erb_cos_filters_nx(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM, 1)
   filts, hz_cutoffs, freqs = make_erb_cos_filters_nx(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM, 2)
-  filts, hz_cutoffs, freqs = make_erb_cos_filters_nx(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM, 3)
   filts, hz_cutoffs, freqs = make_erb_cos_filters_nx(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM, 4)
   exit()
+
 
 if __name__ == '__main__':
   runTests()
