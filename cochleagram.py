@@ -129,6 +129,7 @@ def generate_subbands(signal, filters, pad_factor=None):
 
     return subbands
 
+
 def generate_analytic_subbands(signal, filters, pad_factor=None):
   subbands = generate_subbands(signal, filters, pad_factor=pad_factor)
   # subbands = subbands[:, :signal.shape[0]/2]

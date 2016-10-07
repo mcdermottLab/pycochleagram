@@ -3,6 +3,7 @@ from scipy.io import wavfile
 import pyaudio
 import matplotlib.pyplot as plt
 
+
 def parse_rescale_arg(rescale):
   """ Parse the rescaling argument to a standard form. Throws an error if rescale
     value is unrecognized.
@@ -91,3 +92,7 @@ def plot_waveform(snd_array, samp_freq, n_channels=None):
   print time_axis[-1]
   plt.plot(time_axis, snd_array)
   return time_axis, snd_array
+
+
+def plot_spectra():
+  pass
