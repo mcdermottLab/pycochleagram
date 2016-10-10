@@ -51,7 +51,7 @@ def make_cosine_filter(freqs, l, h, convert_to_erb=True):
         see convert_to_erb parameter below.. A single half-cosine
         filter will be defined only on the valid section of these values;
         specifically, the values between cutoffs "l" and "h". A half-cosine filter
-        centered at (h - l ) / 2 is created on the interval [l, h]. T
+        centered at (h - l ) / 2 is created on the interval [l, h].
       l (number): The lower cutoff of the half-cosine filter in ERB space; see
         convert_to_erb parameter below.
       h (number): The upper cutoff of the half-cosine filter in ERB space; see
@@ -86,8 +86,9 @@ def make_full_filter_set(filts, signal_length=None):
   frequencies.
 
   Args:
-      filts (array): Array containing the cochlear filterbank in frequency space.
-        Each row of filts is a single filter, with columns indexing frequency.
+      filts (array): Array containing the cochlear filterbank in frequency space,
+        i.e., the output of make_erb_cos_filters_nx. Each row of filts is a
+        single filter, with columns indexing frequency.
       signal_length (int, optional): Length of the signal to be filtered with this filterbank.
         This should be equal to filter length * 2 - 1, i.e., 2*filts.shape[1] - 1, and if
         signal_length is None, this value will be computed with the above formula.
@@ -223,7 +224,7 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
   for i in range(sample_factor):
     # account for the fact that the first sample_factor # of filts are lowpass
     i_offset = i + sample_factor
-    lp_h_ind = max(np.where(freqs < erb2freq(center_freqs[0]))[0])  # lowpass filter goes up to peak of first cos filter
+    lp_h_ind = max(np.where(freqs < erb2freq(center_freqs[i]))[0])  # lowpass filter goes up to peak of first cos filter
     lp_filt = np.sqrt(1 - np.power(filts[:lp_h_ind+1, i_offset], 2))
 
     hp_l_ind = min(np.where(freqs > erb2freq(center_freqs[-1-i]))[0])  # highpass filter goes down to peak of last cos filter
@@ -250,7 +251,7 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
   return filts, center_freqs, freqs
 
 
-def make_erb_cos_filters_1x(signal_length, sr, n, low_lim, hi_lim, pad_factor=None, full_filter=False, strict=True):
+def make_erb_cos_filters_1x(signal_length, sr, n, low_lim, hi_lim, pad_factor=None, full_filter=False, strict=False):
   """Create ERB cosine filterbank, sampled from ERB at 1x overcomplete.
 
   Returns n+2 filters as ??column vector
@@ -294,10 +295,10 @@ def make_erb_cos_filters_1x(signal_length, sr, n, low_lim, hi_lim, pad_factor=No
       freqs (array): is a vector of frequencies the same length as filts, that
         can be used to plot the frequency response of the filters.
   """
-  return make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, 1, pad_factor=pad_factor, full_filter=True, strict=True)
+  return make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, 1, pad_factor=pad_factor, full_filter=full_filter, strict=strict)
 
 
-def make_erb_cos_filters_2x(signal_length, sr, n, low_lim, hi_lim, pad_factor=None, full_filter=True, strict=True):
+def make_erb_cos_filters_2x(signal_length, sr, n, low_lim, hi_lim, pad_factor=None, full_filter=False, strict=False):
   """Create ERB cosine filterbank, sampled from ERB at 2x overcomplete.
 
   Returns 2*n+5 filters as column vectors
@@ -344,10 +345,10 @@ def make_erb_cos_filters_2x(signal_length, sr, n, low_lim, hi_lim, pad_factor=No
       freqs (array): is a vector of frequencies the same length as filts, that
         can be used to plot the frequency response of the filters.
   """
-  return make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, 2, pad_factor=pad_factor, full_filter=True, strict=True)
+  return make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, 2, pad_factor=pad_factor, full_filter=full_filter, strict=strict)
 
 
-def make_erb_cos_filters_4x(signal_length, sr, n, low_lim, hi_lim, pad_factor=None, full_filter=True, strict=True):
+def make_erb_cos_filters_4x(signal_length, sr, n, low_lim, hi_lim, pad_factor=None, full_filter=False, strict=False):
   """Create ERB cosine filterbank, sampled from ERB at 4x overcomplete.
 
   Returns 4*n+11 filters as column vectors
@@ -394,11 +395,11 @@ def make_erb_cos_filters_4x(signal_length, sr, n, low_lim, hi_lim, pad_factor=No
       freqs (array): is a vector of frequencies the same length as filts, that
         can be used to plot the frequency response of the filters.
   """
-  return make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, 4, pad_factor=pad_factor, full_filter=True, strict=True)
+  return make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, 4, pad_factor=pad_factor, full_filter=full_filter, strict=strict)
 
 
-def make_erb_cos_filters(signal_length, sr, n, low_lim, hi_lim, full_filter=True, strict=True):
-  """ Fairly literal port of Josh McDermott's MATLAB make_erb_cos_filters. Useful
+def make_erb_cos_filters(signal_length, sr, n, low_lim, hi_lim, full_filter=False, strict=False):
+  """Fairly literal port of Josh McDermott's MATLAB make_erb_cos_filters. Useful
   for debugging, but isn't very generalizable. Use make_erb_cos_filters_1x or
   make_erb_cos_filters_nx with sample_factor=1 instead.
 

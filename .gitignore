@@ -1,4 +1,8 @@
 .DS_Store
-*.pyc
 *.wav
 *.sublime*
+**/.cache
+*.pyc
+**/__pycache__
+**/.ipynb_checkpoints
+**/*.ipynb
