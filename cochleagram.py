@@ -7,13 +7,45 @@ import numpy as np
 import scipy.signal
 import matplotlib.pyplot as plt
 
-from erbFilter import *
+import erbFilter as erb
 import utils
 
-import pdb
+
+def reshape_signal_canonical(signal):
+  """Convert the signal into a canonical shape for use with cochleagram.py
+  functions.
+
+  This first verifies that the signal contains only one data channel, which can
+  be in a row, a column, or a flat array. Then it flattens the signal array.
+
+  Args:
+    signal (array): The sound signal (waveform) in the time domain. Should be
+      either a flattened array with shape (n_samples,), a row vector with shape
+      (1, n_samples), or a column vector with shape (n_samples, 1).
+
+  Returns:
+    out_signal (array): If the input `signal` has a valid shape, returns a
+      flattened version of the signal.
+
+  Raises:
+    ValueError: Raises an error of the input `signal` has invalid shape.
+  """
+  if signal.ndim == 1:  # signal is a flattened array
+    out_signal = signal
+  elif signal.ndim == 2:  # signal is a row or column vector
+    if signal.shape[0] == 1:
+      out_signal = signal.flatten()
+    elif signal.shape[1] == 1:
+      out_signal = signal.flatten()
+    else:
+      raise ValueError('signal must be a row or column vector; found shape: %s' % signal.shape)
+  else:
+    raise ValueError('signal must be a row or column vector; found shape: %s' % signal.shape)
+  return out_signal
 
 
-def generate_subband_envelopes_fast(signal, filters, pad_factor=None, downsample=None, nonlinearity=None):
+def generate_subband_envelopes_fast(signal, filters, pad_factor=None,
+      downsample=None, nonlinearity=None, fft_mode='auto', debug_ret_all=False):
   """Generate the subband envelopes (i.e., the cochleagram) of the signal by
   applying the provided filters.
 
@@ -23,18 +55,17 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None, downsample
   nonlinearity.
 
   This function expedites the calculation of the subbands envelopes by:
-    1) using the rfft rather than standard fft to compute the dft.
-    2) hand-computing the Hilbert transform, to avoid repeated and unnecessary
-       calls to fft/ifft.
+    1) using the rfft rather than standard fft to compute the dft for
+       real-valued signals
+    2) hand-computing the Hilbert transform, to avoid unnecessary calls
+       to fft/ifft.
 
-  The Fourier-based analytic signal algorithm can be found here:
-  Marple.  Computing the Discrete-Time Analytic Signal via FFT.  IEEE Trans Sig Proc 1999.
-  http://classes.engr.oregonstate.edu/eecs/winter2009/ece464/AnalyticSignal_Sept1999_SPTrans.pdf
-
-  Credit to Alex Kell for this method.
+  See utils.rfft, utils.irfft, and utils.fhilbert for more details on the
+  methods used for speed-up.
 
   Args:
-    signal (array): The sound signal (waveform) in the time domain.
+    signal (array): The sound signal (waveform) in the time domain. Should be
+      flattened, i.e., the shape is (n_samples,).
     filters (array): The filterbank, in frequency space, used to generate the
       cochleagram. This should be the full filter-set output of
       erbFilter.make_erb_cos_filters_nx, or similar.
@@ -56,24 +87,126 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None, downsample
       `apply_envelope_nonlinearity` for more information. This will be applied
       to the cochleagram after downsampling. Providing a callable for applying
       a custom nonlinearity is suggested.
+    fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
+      to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
+      will fallback to numpy, if necessary.
 
   Returns:
-    subband_evelopes: The subband envelopes (i.e., cochleagram) resulting from
+    subband_envelopes: The subband envelopes (i.e., cochleagram) resulting from
       the subband decomposition. If a downsampling and/or nonlinearity
       operation was requested, the output will reflect these operations.
       This should have the same shape as `filters`.
   """
-  if pad_factor is not None and pad_factor >= 1:
-    signal, padding = pad_signal(signal, pad_factor)
+  # convert the signal to a canonical representation
+  signal_flat = reshape_signal_canonical(signal)
 
-  n = signal.shape[0]
+  if pad_factor is not None and pad_factor > 1:
+    signal_flat, padding = pad_signal(signal_flat, pad_factor)
+
+  if np.isrealobj(signal_flat):  # attempt to speed up computation with rfft
+    fft_sample = utils.rfft(signal_flat, mode=fft_mode)
+    nr = fft_sample.shape[0]
+    # prep for hilbert transform by extending to negative freqs
+    subbands = np.zeros(filters.shape, dtype=complex)
+    subbands[:, :nr] = _real_freq_filter(fft_sample, filters)
+  else:
+    fft_sample = utils.fft(signal_flat, mode=fft_mode)
+    subbands = filters * fft_sample
+
+  analytic_subbands = utils.fhilbert(subbands, mode=fft_mode)
+  subband_envelopes = np.abs(analytic_subbands)
+
+  if pad_factor is not None and pad_factor > 1:
+    analytic_subbands = analytic_subbands[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
+    subband_envelopes = subband_envelopes[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
+
+  subband_envelopes = apply_envelope_downsample(subband_envelopes, downsample)
+  subband_envelopes = apply_envelope_nonlinearity(subband_envelopes, nonlinearity)
+
+  if debug_ret_all is True:
+    out_dict = {}
+    # add all local variables to out_dict
+    for k in dir():
+      if k != 'out_dict':
+        out_dict[k] = locals()[k]
+    return out_dict
+  else:
+    return subband_envelopes
+
+
+def generate_subband_envelopes_alex_fast(signal, filters, pad_factor=None,
+      downsample=None, nonlinearity=None, debug_ret_all=False):
+  """Generate the subband envelopes (i.e., the cochleagram) of the signal by
+  applying the provided filters.
+
+  This method returns *only* the envelopes of the subband decomposition.
+  The signal can be optionally zero-padded before the decomposition. The
+  resulting envelopes can be optionally downsampled and then modified with a
+  nonlinearity.
+
+  This function expedites the calculation of the subbands envelopes by:
+    1) using the rfft rather than standard fft to compute the dft.
+    2) hand-computing the Hilbert transform, to avoid repeated and unnecessary
+       calls to fft/ifft.
+
+  The Fourier-based analytic signal algorithm can be found here:
+  Marple.  Computing the Discrete-Time Analytic Signal via FFT.  IEEE Trans Sig Proc 1999.
+  http://classes.engr.oregonstate.edu/eecs/winter2009/ece464/AnalyticSignal_Sept1999_SPTrans.pdf
+
+  Credit to Alex Kell for this method.
+
+  Args:
+    signal (array): The sound signal (waveform) in the time domain. Should be
+      flattened, i.e., the shape is (n_samples,).
+    filters (array): The filterbank, in frequency space, used to generate the
+      cochleagram. This should be the full filter-set output of
+      erbFilter.make_erb_cos_filters_nx, or similar.
+    pad_factor (int, optional): Factor that determines if the signal will be
+      zero-padded before generating the subbands. If this is None,
+      or less than 1, no zero-padding will be used. Otherwise, zeros are added
+      to the end of the input signal until is it of length
+      `pad_factor * length(signal)`. This padded region will be removed after
+      performing the subband decomposition.
+    downsample (None, int, callable, optional): The `downsample` argument can
+      be an downsampling factor, a callable (to perform custom downsampling),
+      or None to return the unmodified cochleagram; see
+      `apply_envelope_downsample` for more information. This will be applied
+      to the cochleagram before the nonlinearity. Providing a callable for
+      custom downsampling is suggested.
+    nonlinearity (None, int, callable, optional): The `nonlinearity` argument
+      can be an predefined type, a callable (to apply a custom nonlinearity),
+      or None to return the unmodified cochleagram; see
+      `apply_envelope_nonlinearity` for more information. This will be applied
+      to the cochleagram after downsampling. Providing a callable for applying
+      a custom nonlinearity is suggested.
+    fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
+      to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
+      will fallback to numpy, if necessary.
+
+  Returns:
+    subband_envelopes: The subband envelopes (i.e., cochleagram) resulting from
+      the subband decomposition. If a downsampling and/or nonlinearity
+      operation was requested, the output will reflect these operations.
+      This should have the same shape as `filters`.
+  """
+  warnings.warn('Function is deprecated; use generate_subband_envelopes_fast instead', DeprecationWarning)
+
+  # convert the signal to a canonical representation
+  signal_flat = reshape_signal_canonical(signal)
+
+  if pad_factor is not None and pad_factor >= 1:
+    signal_flat, padding = pad_signal(signal_flat, pad_factor)
+
+  n = signal_flat.shape[0]
   assert np.mod(n, 2) == 0  # likely overly stringent but just for safety here
 
   nr = int(np.floor(n / 2)) + 1
   n_filts = filters.shape[0]
 
-  # note: the real fft
-  Fr = np.fft.rfft(signal)  # len: nr = n/2+1 (e.g., 8001 for 1 sec and 16K sr)
+  # note: the real fft, signal needs to be flat or have axis specified
+  Fr = np.fft.rfft(signal_flat)  # len: nr = n/2+1 (e.g., 8001 for 1 sec and 16K sr)
+
+  # pdb.set_trace()
 
   # compute the subbands
   # note that "real" here doesn't indicate that the variable consists of real
@@ -105,26 +238,24 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None, downsample
   subband_envelopes = np.abs(analytic_subbands)
 
   if pad_factor is not None and pad_factor >= 1:
-    analytic_subbands = analytic_subbands[:, :signal.shape[0]-padding]  # i dont know if this is correct
-    subband_envelopes = subband_envelopes[:, :signal.shape[0]-padding]  # i dont know if this is correct
+    analytic_subbands = analytic_subbands[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
+    subband_envelopes = subband_envelopes[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
 
   subband_envelopes = apply_envelope_downsample(subband_envelopes, downsample)
   subband_envelopes = apply_envelope_nonlinearity(subband_envelopes, nonlinearity)
 
-  # ## now just return things
-  # if get_analytic_subbands_too and do_return_envs:
-  #   return subband_envelopes, analytic_subbands
-  # elif get_analytic_subbands_too:
-  #   return subbands, analytic_subbands
-  # elif do_return_envs:
-  #   return subband_envelopes
-  # else:
-  #     raise NotImplementedError()
-
-  return subband_envelopes
+  if debug_ret_all is True:
+    out_dict = {}
+    # add all local variables to out_dict
+    for k in dir():
+      if k != 'out_dict':
+        out_dict[k] = locals()[k]
+    return out_dict
+  else:
+    return subband_envelopes
 
 
-def generate_subbands(signal, filters, pad_factor=None):
+def generate_subbands(signal, filters, pad_factor=None, fft_mode='auto', debug_ret_all=False):
   """Generate the subband decomposition of the signal by applying the provided
   filters.
 
@@ -142,6 +273,9 @@ def generate_subbands(signal, filters, pad_factor=None):
       to the end of the input signal until is it of length
       `pad_factor * length(signal)`. This padded region will be removed after
       performing the subband decomposition.
+    fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
+      to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
+      will fallback to numpy, if necessary.
 
   Returns:
     subbands : The subbands resulting from the subband decomposition. This
@@ -152,23 +286,41 @@ def generate_subbands(signal, filters, pad_factor=None):
   #   padding = signal.shape[0] * pad_factor - signal.shape[0]
   #   print('padding ', padding)
   #   signal = np.concatenate((signal, np.zeros(padding)))
-  signal, padding = pad_signal(signal, pad_factor)
 
-  fft_sample = np.fft.fft(signal)
+  # convert the signal to a canonical representation
+  signal_flat = reshape_signal_canonical(signal)
 
-  # below: fft_subbands and then subbands in time
-  #   python implicitly expands out fft_sample!  awesome.
-  subbands = filters * fft_sample
-  subbands = np.real(np.fft.ifft(subbands))  # operates row-wise
-  print('sbsh ,', subbands.shape)
-  print(signal.shape)
+  if pad_factor is not None and pad_factor > 1:
+    signal_flat, padding = pad_signal(signal_flat, pad_factor)
 
-  if pad_factor is not None and pad_factor >= 1:
-    print(padding)
-    subbands = subbands[:, :signal.shape[0]-padding]  # i dont know if this is correct
-  print('sbsh post, ', subbands.shape)
+  is_signal_even = signal_flat.shape[0] % 2 == 0
+  if np.isrealobj(signal_flat) and is_signal_even:  # attempt to speed up computation with rfft
+    if signal_flat.shape[0] % 2 == 0:
+      fft_sample = utils.rfft(signal_flat, mode=fft_mode)
+      subbands = _real_freq_filter(fft_sample, filters)
+      subbands = utils.irfft(subbands, mode=fft_mode)  # operates row-wise
+    else:
+      warnings.warn('Consider using even-length signal for a rfft speedup', RuntimeWarning, stacklevel=2)
+      fft_sample = utils.fft(signal_flat, mode=fft_mode)
+      subbands = filters * fft_sample
+      subbands = np.real(utils.ifft(subbands, mode=fft_mode))  # operates row-wise
+  else:
+    fft_sample = utils.fft(signal_flat, mode=fft_mode)
+    subbands = filters * fft_sample
+    subbands = np.real(utils.ifft(subbands, mode=fft_mode))  # operates row-wise
 
-  return subbands
+  if pad_factor is not None and pad_factor > 1:
+    subbands = subbands[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
+
+  if debug_ret_all is True:
+    out_dict = {}
+    # add all local variables to out_dict
+    for k in dir():
+      if k != 'out_dict':
+        out_dict[k] = locals()[k]
+    return out_dict
+  else:
+    return subbands
 
 
 def generate_analytic_subbands(signal, filters, pad_factor=None):
@@ -190,6 +342,9 @@ def generate_analytic_subbands(signal, filters, pad_factor=None):
       input signal until is it of length `pad_factor * length(signal)`. This
       padded region will be removed after performing the subband
       decomposition.
+    fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
+      to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
+      will fallback to numpy, if necessary.
       TODO: fix zero-padding
 
   Returns:
@@ -202,7 +357,7 @@ def generate_analytic_subbands(signal, filters, pad_factor=None):
   return scipy.signal.hilbert(subbands)
 
 
-def generate_subband_envelopes(signal, filters, pad_factor=None, downsample=None, nonlinearity=None):
+def generate_subband_envelopes(signal, filters, pad_factor=None, downsample=None, nonlinearity=None, debug_ret_all=False):
   """Generate the subband envelopes (i.e., the cochleagram) of the signal by
     applying the provided filters.
 
@@ -234,24 +389,34 @@ def generate_subband_envelopes(signal, filters, pad_factor=None, downsample=None
       apply_envelope_nonlinearity for more information. This will be applied
       to the cochleagram after downsampling. Providing a callable for applying
       a custom nonlinearity is suggested.
+    fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
+      to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
+      will fallback to numpy, if necessary.
 
   Returns:
-    subband_evelopes: The subband envelopes (i.e., cochleagram) resulting from
+    subband_envelopes: The subband envelopes (i.e., cochleagram) resulting from
       the subband decomposition. If a downsampling and/or nonlinearity
       operation was requested, the output will reflect these operations.
       This should have the same shape as `filters`.
   """
   analytic_subbands = generate_analytic_subbands(signal, filters, pad_factor=pad_factor)
   subband_envelopes = np.abs(analytic_subbands)
-  print(subband_envelopes.min(), ', ', subband_envelopes.max())
 
   subband_envelopes = apply_envelope_downsample(subband_envelopes, downsample)
   subband_envelopes = apply_envelope_nonlinearity(subband_envelopes, nonlinearity)
 
-  return subband_envelopes
+  if debug_ret_all is True:
+    out_dict = {}
+    # add all local variables to out_dict
+    for k in dir():
+      if k != 'out_dict':
+        out_dict[k] = locals()[k]
+    return out_dict
+  else:
+    return subband_envelopes
 
 
-def pad_signal(signal, pad_factor):
+def pad_signal(signal, pad_factor, axis=0):
   """Pad the signal by appending zeros to the end. The padded signal has
   length `pad_factor * length(signal)`.
 
@@ -259,6 +424,7 @@ def pad_signal(signal, pad_factor):
     signal (array): The signal to be zero-padded.
     pad_factor (int): Factor that determines the size of the padded signal.
       The padded signal has length `pad_factor * length(signal)`.
+    axis (int): Specifies the axis to pad; defaults to 0.
 
   Returns:
     (tuple): tuple containing:
@@ -267,9 +433,14 @@ def pad_signal(signal, pad_factor):
       padding_size (int): The length of the zero-padding added to the array.
   """
   if pad_factor is not None and pad_factor >= 1:
-    padding_size = signal.shape[0] * pad_factor - signal.shape[0]
-    print('padding signal with ', padding_size)
-    return (np.concatenate((signal, np.zeros(padding_size))), padding_size)
+    padding_size = signal.shape[axis] * pad_factor - signal.shape[axis]
+    pad_shape = list(signal.shape)
+    pad_shape[axis] = padding_size
+    pad_signal = np.concatenate((signal, np.zeros(pad_shape)))
+  else:
+    padding_size = 0
+    pad_signal = signal
+  return (pad_signal, padding_size)
 
 
 def apply_envelope_downsample(subband_envelopes, downsample):
@@ -289,7 +460,7 @@ def apply_envelope_downsample(subband_envelopes, downsample):
       returned.
 
   Returns:
-    downsampled_subband_envelopes (array): The subband_evelopes after being
+    downsampled_subband_envelopes (array): The subband_envelopes after being
       downsampled with `downsample`.
   """
   if downsample is None:
@@ -327,7 +498,7 @@ def apply_envelope_nonlinearity(subband_envelopes, nonlinearity):
       applied and the unmodified cochleagram is returned.
 
   Returns:
-    nonlinear_subband_envelopes (array): The subband_evelopes with the specified
+    nonlinear_subband_envelopes (array): The subband_envelopes with the specified
       nonlinearity applied.
 
   Raises:
@@ -356,12 +527,20 @@ def apply_envelope_nonlinearity(subband_envelopes, nonlinearity):
   return subband_envelopes
 
 
+def _real_freq_filter(rfft_signal, filters):
+  """Helper function to apply a full filterbank to a rfft signal
+  """
+  nr = rfft_signal.shape[0]
+  subbands = filters[:, :nr] * rfft_signal
+  return subbands
+
+
 def make_cochleagram_ray():
   DUR = 50 / 1000
-  SR = 20001
+  SR = 20000
   LOW_LIM = 50
   HI_LIM = 20000
-  N_HUMAN = np.floor(freq2erb(HI_LIM) - freq2erb(LOW_LIM)) - 1;
+  N_HUMAN = np.floor(erb.freq2erb(HI_LIM) - erb.freq2erb(LOW_LIM)) - 1;
   N_HUMAN = N_HUMAN.astype(int)
   ENV_SR = 6000
   PAD_FACTOR = 1
@@ -377,13 +556,14 @@ def make_cochleagram_ray():
 
   print(t.shape)
 
-  filts, hz_cutoffs, freqs = make_erb_cos_filters_nx(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM,
-                                                     2, pad_factor=PAD_FACTOR, strict=False)
+  filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM,
+                                                     2, pad_factor=PAD_FACTOR, full_filter=True, strict=False)
   # filts, hz_cutoffs, freqs = make_erb_cos_filters(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM, full_filter=True, strict=False)
+  print(filts.shape)
 
-  downsample_fx = lambda x: scipy.signal.resample_poly(x, 6000, SR, axis=1)
+  # downsample_fx = lambda x: scipy.signal.resample_poly(x, 6000, SR, axis=1)
   # downsample_fx = lambda x: scipy.signal.decimate(x, 3, axis=1, ftype='fir') # this caused weird banding artifacts
-  # downsample_fx = lambda x: scipy.signal.resample(x, np.ceil(x.shape[1]*(6000/SR)), axis=1)  # fourier method: this causes NANs that get converted to 0s
+  downsample_fx = lambda x: scipy.signal.resample(x, np.ceil(x.shape[1]*(6000/SR)), axis=1)  # fourier method: this causes NANs that get converted to 0s
   # sub_envs = generate_subband_envelopes(ct, filts, pad_factor=PAD_FACTOR, downsample=downsample_fx, nonlinearity='log')
   sub_envs = generate_subband_envelopes_fast(ct, filts, pad_factor=PAD_FACTOR, downsample=downsample_fx, nonlinearity='log')
 
