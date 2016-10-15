@@ -33,6 +33,6 @@ if rem(signal_length,2)==0 %even length -
 else %odd length
     fft_filts = [filts' fliplr(filts(2:filt_length,:)')]';
 end
-% size(fft_filts)
+size(fft_filts)
 fft_subbands = fft_filts.*(fft_sample*ones(1,N+2));%multiply by array of column replicas of fft_sample
 subbands = real(ifft(fft_subbands)); %ifft works on columns; imag part is small, probably discretization error?
