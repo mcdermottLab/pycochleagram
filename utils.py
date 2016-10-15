@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from matplotlib.pyplot import plt as plt
+from matplotlib.pyplot import imshow, show
 import numpy as np
 
 
@@ -36,15 +36,15 @@ def cochshow(cochleagram, interact=True):
   Returns:
     image : AxesImage
   """
-  f = plt.imshow(cochleagram, aspect='auto', cmap='viridis')
+  f = imshow(cochleagram, aspect='auto', cmap='viridis')
   if interact:
-    plt.show()
+    show()
   return f
 
 
-def fft(a, mode='auto', params=None):
+def fft(a, n=None, axis=-1, norm=None, mode='auto', params=None):
   """Provides support for various implementations of the FFT, using numpy's
-  fftpack or pyfftw's fftw.
+  fftpack or pyfftw's fftw. This uses a numpy.fft-like interface.
 
   Args:
     a (array): Time-domain signal.
@@ -52,10 +52,19 @@ def fft(a, mode='auto', params=None):
       'fftw', 'np', and 'auto'. Using 'auto', will attempt to use a pyfftw
       implementation with some sensible parameters (if the module is
       available), and will use numpy's fftpack implementation otherwise.
-    params (dict, None, optional): Dictionary of input arguments to provide to
-      the appropriate fft function. If `mode` is 'auto' and `params` dict is
-      None, sensible values will be chosen. If `params` is not None, it will
-      not be altered.
+    n (int, optional): Length of the transformed axis of the output. If n is
+      smaller than the length of the input, the input is cropped. If it is
+      larger, the input is padded with zeros. If n is not given, the length of
+      the input along the axis specified by axis is used.
+    axis (int, optional): Axis over which to compute the FFT. If not given, the
+      last axis is used.
+    norm ({None, “ortho”}, optional): Support for numpy interface.
+    params (dict, None, optional): Dictionary of additional input arguments to
+      provide to the appropriate fft function (usually fftw). Note, named
+      arguments (e.g., `n`, `axis`, and `norm`) will override identically named
+      arguments in `params`. If `mode` is 'auto' and `params` dict is None,
+      sensible values will be chosen. If `params` is not None, it will not be
+      altered.
 
   Returns:
     fft_a (array): Signal in the frequency domain in FFT standard order.
@@ -63,6 +72,8 @@ def fft(a, mode='auto', params=None):
   """
   # handle 'auto' mode
   mode, params = _parse_mode(mode, params)
+  # named args override params
+  params = {**params, 'n': n, 'axis': axis, 'norm': norm}
 
   if mode == 'fftw':
     import pyfftw
@@ -74,9 +85,9 @@ def fft(a, mode='auto', params=None):
                               'use "auto", "np" or "fftw".')
 
 
-def ifft(a, mode='auto', params=None):
+def ifft(a, n=None, axis=-1, norm=None, mode='auto', params=None):
   """Provides support for various implementations of the IFFT, using numpy's
-  fftpack or pyfftw's fftw.
+  fftpack or pyfftw's fftw. This uses a numpy.fft-like interface.
 
   Args:
     a (array): Time-domain signal.
@@ -84,10 +95,20 @@ def ifft(a, mode='auto', params=None):
       'fftw', 'np', and 'auto'. Using 'auto', will attempt to use a pyfftw
       implementation with some sensible parameters (if the module is
       available), and will use numpy's fftpack implementation otherwise.
-    params (dict, None, optional): Dictionary of input arguments to provide to
-      the appropriate fft function. If `mode` is 'auto' and `params` dict is
-      None, sensible values will be chosen. If `params` is not None, it will
-      not be altered.
+    n (int, optional): Length of the transformed axis of the output. If n is
+      smaller than the length of the input, the input is cropped. If it is
+      larger, the input is padded with zeros. If n is not given, the length of
+      the input along the axis specified by axis is used.
+    axis (int, optional): Axis over which to compute the FFT. If not given, the
+      last axis is used.
+    norm ({None, “ortho”}, optional): Support for numpy interface.
+    params (dict, None, optional): Dictionary of additional input arguments to
+      provide to the appropriate fft function (usually fftw). Note, named
+      arguments (e.g., `n`, `axis`, and `norm`) will override identically named
+      arguments in `params`. If `mode` is 'auto' and `params` dict is None,
+      sensible values will be chosen. If `params` is not None, it will not be
+      altered.
+
 
   Returns:
     ifft_a (array): Signal in the time domain. See numpy.ifft() for a
@@ -95,6 +116,8 @@ def ifft(a, mode='auto', params=None):
   """
   # handle 'auto' mode
   mode, params = _parse_mode(mode, params)
+  # named args override params
+  params = {**params, 'n': n, 'axis': axis, 'norm': norm}
 
   if mode == 'fftw':
     import pyfftw
@@ -106,9 +129,9 @@ def ifft(a, mode='auto', params=None):
                               'use "np" or "fftw".')
 
 
-def rfft(a, mode='auto', params=None):
+def rfft(a, n=None, axis=-1, mode='auto', params=None):
   """Provides support for various implementations of the RFFT, using numpy's
-  fftpack or pyfftw's fftw.
+  fftpack or pyfftw's fftw. This uses a numpy.fft-like interface.
 
   Args:
     a (array): Time-domain signal.
@@ -116,10 +139,18 @@ def rfft(a, mode='auto', params=None):
       'fftw', 'np', and 'auto'. Using 'auto', will attempt to use a pyfftw
       implementation with some sensible parameters (if the module is
       available), and will use numpy's fftpack implementation otherwise.
-    params (dict, None, optional): Dictionary of input arguments to provide to
-      the appropriate fft function. If `mode` is 'auto' and `params` dict is
-      None, sensible values will be chosen. If `params` is not None, it will
-      not be altered.
+    n (int, optional): Length of the transformed axis of the output. If n is
+      smaller than the length of the input, the input is cropped. If it is
+      larger, the input is padded with zeros. If n is not given, the length of
+      the input along the axis specified by axis is used.
+    axis (int, optional): Axis over which to compute the FFT. If not given, the
+      last axis is used.
+    params (dict, None, optional): Dictionary of additional input arguments to
+      provide to the appropriate fft function (usually fftw). Note, named
+      arguments (e.g., `n` and `axis`) will override identically named
+      arguments in `params`. If `mode` is 'auto' and `params` dict is None,
+      sensible values will be chosen. If `params` is not None, it will not be
+      altered.
 
   Returns:
     rfft_a (array): Signal in the frequency domain in standard order.
@@ -127,6 +158,8 @@ def rfft(a, mode='auto', params=None):
   """
   # handle 'auto' mode
   mode, params = _parse_mode(mode, params)
+  # named args override params
+  params = {**params, 'n': n, 'axis': axis}
 
   if mode == 'fftw':
     import pyfftw
@@ -138,9 +171,9 @@ def rfft(a, mode='auto', params=None):
                               'use "np" or "fftw".')
 
 
-def irfft(a, mode='auto', params=None):
+def irfft(a, n=None, axis=-1, mode='auto', params=None):
   """Provides support for various implementations of the IRFFT, using numpy's
-  fftpack or pyfftw's fftw.
+  fftpack or pyfftw's fftw. This uses a numpy.fft-like interface.
 
   Args:
     a (array): Time-domain signal.
@@ -148,10 +181,18 @@ def irfft(a, mode='auto', params=None):
       'fftw', 'np', and 'auto'. Using 'auto', will attempt to use a pyfftw
       implementation with some sensible parameters (if the module is
       available), and will use numpy's fftpack implementation otherwise.
-    params (dict, None, optional): Dictionary of input arguments to provide to
-      the appropriate fft function. If `mode` is 'auto' and `params` dict is
-      None, sensible values will be chosen. If `params` is not None, it will
-      not be altered.
+    n (int, optional): Length of the transformed axis of the output. If n is
+      smaller than the length of the input, the input is cropped. If it is
+      larger, the input is padded with zeros. If n is not given, the length of
+      the input along the axis specified by axis is used.
+    axis (int, optional): Axis over which to compute the FFT. If not given, the
+      last axis is used.
+    params (dict, None, optional): Dictionary of additional input arguments to
+      provide to the appropriate fft function (usually fftw). Note, named
+      arguments (e.g., `n` and `axis`) will override identically named
+      arguments in `params`. If `mode` is 'auto' and `params` dict is None,
+      sensible values will be chosen. If `params` is not None, it will not be
+      altered.
 
   Returns:
     irfft_a (array): Signal in the time domain. See numpy.irfft() for a
@@ -159,6 +200,8 @@ def irfft(a, mode='auto', params=None):
   """
   # handle 'auto' mode
   mode, params = _parse_mode(mode, params)
+  # named args override params
+  params = {**params, 'n': n, 'axis': axis}
 
   if mode == 'fftw':
     import pyfftw
