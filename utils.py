@@ -18,8 +18,9 @@ def matlab_arange(start, stop, num):
     num (int): Number of samples to generate.
 
   Returns:
-    samples (ndarray): There are `num + 1` equally spaced samples in the closed
-      interval.
+    ndarray:
+    **samples**: There are `num + 1` equally spaced samples in the closed
+    interval.
   """
   return np.linspace(start, stop, num + 1)
 
@@ -34,7 +35,8 @@ def cochshow(cochleagram, interact=True):
       be created but not displayed.
 
   Returns:
-    image : AxesImage
+    AxesImage:
+      **image**: Whatever matplotlib.pyplot.plt returns.
   """
   f = imshow(cochleagram, aspect='auto', cmap='viridis')
   if interact:
@@ -58,7 +60,7 @@ def fft(a, n=None, axis=-1, norm=None, mode='auto', params=None):
       the input along the axis specified by axis is used.
     axis (int, optional): Axis over which to compute the FFT. If not given, the
       last axis is used.
-    norm ({None, “ortho”}, optional): Support for numpy interface.
+    norm ({None, 'ortho'}, optional): Support for numpy interface.
     params (dict, None, optional): Dictionary of additional input arguments to
       provide to the appropriate fft function (usually fftw). Note, named
       arguments (e.g., `n`, `axis`, and `norm`) will override identically named
@@ -67,8 +69,9 @@ def fft(a, n=None, axis=-1, norm=None, mode='auto', params=None):
       altered.
 
   Returns:
-    fft_a (array): Signal in the frequency domain in FFT standard order.
-      See numpy.fft() for a description of the output.
+    array:
+      **fft_a**: Signal in the frequency domain in FFT standard order. See numpy.fft() for
+      a description of the output.
   """
   # handle 'auto' mode
   mode, params = _parse_mode(mode, params)
@@ -101,7 +104,7 @@ def ifft(a, n=None, axis=-1, norm=None, mode='auto', params=None):
       the input along the axis specified by axis is used.
     axis (int, optional): Axis over which to compute the FFT. If not given, the
       last axis is used.
-    norm ({None, “ortho”}, optional): Support for numpy interface.
+    norm ({None, 'ortho'}, optional): Support for numpy interface.
     params (dict, None, optional): Dictionary of additional input arguments to
       provide to the appropriate fft function (usually fftw). Note, named
       arguments (e.g., `n`, `axis`, and `norm`) will override identically named
@@ -109,9 +112,9 @@ def ifft(a, n=None, axis=-1, norm=None, mode='auto', params=None):
       sensible values will be chosen. If `params` is not None, it will not be
       altered.
 
-
   Returns:
-    ifft_a (array): Signal in the time domain. See numpy.ifft() for a
+    array:
+    **ifft_a**: Signal in the time domain. See numpy.ifft() for a
       description of the output.
   """
   # handle 'auto' mode
@@ -153,7 +156,8 @@ def rfft(a, n=None, axis=-1, mode='auto', params=None):
       altered.
 
   Returns:
-    rfft_a (array): Signal in the frequency domain in standard order.
+    array:
+    **rfft_a**: Signal in the frequency domain in standard order.
       See numpy.rfft() for a description of the output.
   """
   # handle 'auto' mode
@@ -195,7 +199,8 @@ def irfft(a, n=None, axis=-1, mode='auto', params=None):
       altered.
 
   Returns:
-    irfft_a (array): Signal in the time domain. See numpy.irfft() for a
+    array:
+    **irfft_a**: Signal in the time domain. See numpy.irfft() for a
       description of the output.
   """
   # handle 'auto' mode
@@ -232,7 +237,8 @@ def fhilbert(a, axis=None, mode='auto', ifft_params=None):
       be altered.
 
   Returns:
-    hilbert_a (array): Hilbert transform of input array `a`, in the time domain.
+    array:
+    **hilbert_a**: Hilbert transform of input array `a`, in the time domain.
   """
   if axis is None:
     axis = np.argmax(a.shape)
@@ -270,11 +276,10 @@ def _parse_mode(mode, params):
       altered.
 
   Returns:
-    (tuple): tuple containing:
-
-      out_mode (str): The mode determining the fft implementation to use; either
+    tuple:
+      **out_mode** (str): The mode determining the fft implementation to use; either
         'np' or 'fftw'.
-      out_params (dict): A dictionary containing input arguments to the
+      **out_params** (dict): A dictionary containing input arguments to the
         fft function.
   """
   mode == mode.lower()
