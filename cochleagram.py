@@ -24,7 +24,8 @@ def reshape_signal_canonical(signal):
       (1, n_samples), or a column vector with shape (n_samples, 1).
 
   Returns:
-    out_signal (array): If the input `signal` has a valid shape, returns a
+    array:
+    **out_signal**: If the input `signal` has a valid shape, returns a
       flattened version of the signal.
 
   Raises:
@@ -92,7 +93,8 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None,
       will fallback to numpy, if necessary.
 
   Returns:
-    subband_envelopes: The subband envelopes (i.e., cochleagram) resulting from
+    array:
+    **subband_envelopes**: The subband envelopes (i.e., cochleagram) resulting from
       the subband decomposition. If a downsampling and/or nonlinearity
       operation was requested, the output will reflect these operations.
       This should have the same shape as `filters`.
@@ -184,7 +186,8 @@ def generate_subband_envelopes_alex_fast(signal, filters, pad_factor=None,
       will fallback to numpy, if necessary.
 
   Returns:
-    subband_envelopes: The subband envelopes (i.e., cochleagram) resulting from
+    array:
+    **subband_envelopes**: The subband envelopes (i.e., cochleagram) resulting from
       the subband decomposition. If a downsampling and/or nonlinearity
       operation was requested, the output will reflect these operations.
       This should have the same shape as `filters`.
@@ -278,7 +281,8 @@ def generate_subbands(signal, filters, pad_factor=None, fft_mode='auto', debug_r
       will fallback to numpy, if necessary.
 
   Returns:
-    subbands : The subbands resulting from the subband decomposition. This
+    array:
+    **subbands**: The subbands resulting from the subband decomposition. This
       should have the same shape as `filters`.
   """
   # note: numpy defaults to row vecs
@@ -348,7 +352,8 @@ def generate_analytic_subbands(signal, filters, pad_factor=None):
       TODO: fix zero-padding
 
   Returns:
-    analytic_subbands: The analytic subbands (i.e., hilbert transform) resulting
+    array:
+    **analytic_subbands**: The analytic subbands (i.e., hilbert transform) resulting
       of the subband decomposition. This should have the same shape as
       `filters`.
   """
@@ -394,7 +399,8 @@ def generate_subband_envelopes(signal, filters, pad_factor=None, downsample=None
       will fallback to numpy, if necessary.
 
   Returns:
-    subband_envelopes: The subband envelopes (i.e., cochleagram) resulting from
+    array:
+    **subband_envelopes**: The subband envelopes (i.e., cochleagram) resulting from
       the subband decomposition. If a downsampling and/or nonlinearity
       operation was requested, the output will reflect these operations.
       This should have the same shape as `filters`.
@@ -427,10 +433,9 @@ def pad_signal(signal, pad_factor, axis=0):
     axis (int): Specifies the axis to pad; defaults to 0.
 
   Returns:
-    (tuple): tuple containing:
-
-      pad_signal (array): The zero-padded signal.
-      padding_size (int): The length of the zero-padding added to the array.
+    tuple:
+      **pad_signal** (*array*): The zero-padded signal.
+      **padding_size** (*int*): The length of the zero-padding added to the array.
   """
   if pad_factor is not None and pad_factor >= 1:
     padding_size = signal.shape[axis] * pad_factor - signal.shape[axis]
@@ -460,7 +465,8 @@ def apply_envelope_downsample(subband_envelopes, downsample):
       returned.
 
   Returns:
-    downsampled_subband_envelopes (array): The subband_envelopes after being
+    array:
+    **downsampled_subband_envelopes**: The subband_envelopes after being
       downsampled with `downsample`.
   """
   if downsample is None:
@@ -498,7 +504,8 @@ def apply_envelope_nonlinearity(subband_envelopes, nonlinearity):
       applied and the unmodified cochleagram is returned.
 
   Returns:
-    nonlinear_subband_envelopes (array): The subband_envelopes with the specified
+    array:
+    **nonlinear_subband_envelopes**: The subband_envelopes with the specified
       nonlinearity applied.
 
   Raises:
