@@ -4,7 +4,7 @@ sys.path.insert(1, os.path.join(sys.path[0], '..'))
 import scipy.io as sio
 import numpy as np
 
-import erbFilter as erb
+import erbfilter as erb
 
 
 import pdb

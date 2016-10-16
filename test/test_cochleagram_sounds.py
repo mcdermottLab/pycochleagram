@@ -5,7 +5,7 @@ import scipy.io as sio
 import numpy as np
 
 from utils import cochshow
-import erbFilter as erb
+import erbfilter as erb
 import subband as sb
 
 import scipy.signal

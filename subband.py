@@ -7,7 +7,7 @@ import numpy as np
 import scipy.signal
 import matplotlib.pyplot as plt
 
-import erbFilter as erb
+import erbfilter as erb
 import utils
 
 
