@@ -6,7 +6,7 @@ import numpy as np
 
 from utils import cochshow
 import erbFilter as erb
-import cochleagram as cg
+import subband as sb
 
 import scipy.signal
 
@@ -65,11 +65,11 @@ def test_subbands(rfn, erb_filter_mode='all', verbose=0):
         if verbose > 1:
           print('performing subband decomposition')
         start_time = time.time()
-        subbands_dict = cg.generate_subbands(signal.flatten(), filts, 1, debug_ret_all=True)
+        subbands_dict = sb.generate_subbands(signal.flatten(), filts, 1, debug_ret_all=True)
         tot_time = time.time() - start_time
         print('TIME --> %s' % tot_time)
         # print(subbands.shape, mlab[subbands_key].shape)
-        # subbands = cg.generate_subbands(signal.flatten(), filts, 1, debug_ret_all=False)
+        # subbands = sb.generate_subbands(signal.flatten(), filts, 1, debug_ret_all=False)
         # print(list(subbands_dict.keys()))
 
         if verbose > 1:
@@ -156,7 +156,7 @@ def test_cochleagram(rfn, erb_filter_mode='all', coch_mode='fast',verbose=0):
 
           # perform subband decomposition
           start_time = time.time()
-          subbands_dict = cg.generate_subbands(signal.flatten(), filts, 1, debug_ret_all=True)
+          subbands_dict = sb.generate_subbands(signal.flatten(), filts, 1, debug_ret_all=True)
           tot_time = time.time() - start_time
           print('TIME --> %s' % tot_time)
 
@@ -196,11 +196,11 @@ def test_cochleagram(rfn, erb_filter_mode='all', coch_mode='fast',verbose=0):
 def _get_coch_function(mode):
   mode = mode.lower()
   if mode == 'fast':
-    coch_fx = cg.generate_subband_envelopes_fast
+    coch_fx = sb.generate_subband_envelopes_fast
   elif mode == 'alexfast':
-    coch_fx = cg.generate_subband_envelopes_alex_fast
+    coch_fx = sb.generate_subband_envelopes_alex_fast
   elif mode == 'standard':
-    coch_fx = cg.generate_subband_envelopes
+    coch_fx = sb.generate_subband_envelopes
   elif mode == 'subband':
     coch_fx = None
   else:
