@@ -7,6 +7,7 @@ import numpy as np
 from utils import cochshow
 import erbfilter as erb
 import subband as sb
+import cochleagram as cgram
 
 import scipy.signal
 
@@ -138,17 +139,24 @@ def test_cochleagram(rfn, erb_filter_mode='all', coch_mode='fast',verbose=0):
               (signal_length, sr, N, low_lim, hi_lim, sample_factor))
 
       if erb_filter_mode == 'all' or erb_filter_mode == 'nx':
-        # test make_erb_cos_filters_nx
-        filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(signal_length, sr, N,
-                                                               low_lim, hi_lim, sample_factor,
-                                                               pad_factor=1, full_filter=True, strict=False)
-        # pdb.set_trace()
-        # check *full* filterbanks and associated data
-        assert np.allclose(filts, mlab[filts_key].T), 'filts mismatch: make_erb_cos_filters_nx(...)'  # transpose because of python
-        assert np.allclose(freqs, mlab[freqs_key]), 'Freqs mismatch: make_erb_cos_filters_nx(...)'
-        assert np.allclose(hz_cutoffs, mlab[hz_cutoffs_key]), 'Hz_cutoff mismatch: make_erb_cos_filters_nx(...)'
-        if verbose > 0:
-          print('\tPASSED ERB Filters: make_erb_cos_filters_nx(%s)' % sample_factor)
+        if coch_mode == 'coch':
+          sub_envs_key = 'sub_envs_%s' % sample_factor
+          coch = cgram.human_cochleagram(signal, sr, N, low_lim, hi_lim, sample_factor, pad_factor=1, strict=False)
+          assert np.allclose(coch, mlab[sub_envs_key].T), 'subband_env mismatch: make_erb_cos_filters_nx(...)' # transpose for matlab-to-python
+          if verbose > 0:
+            print('\tPASSED Quick Cochleagram: make_erb_cos_filters_nx(%s)' % sample_factor)
+        else:
+          # test make_erb_cos_filters_nx
+          filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(signal_length, sr, N,
+                                                                 low_lim, hi_lim, sample_factor,
+                                                                 pad_factor=1, full_filter=True, strict=False)
+          # pdb.set_trace()
+          # check *full* filterbanks and associated data
+          assert np.allclose(filts, mlab[filts_key].T), 'filts mismatch: make_erb_cos_filters_nx(...)'  # transpose because of python
+          assert np.allclose(freqs, mlab[freqs_key]), 'Freqs mismatch: make_erb_cos_filters_nx(...)'
+          assert np.allclose(hz_cutoffs, mlab[hz_cutoffs_key]), 'Hz_cutoff mismatch: make_erb_cos_filters_nx(...)'
+          if verbose > 0:
+            print('\tPASSED ERB Filters: make_erb_cos_filters_nx(%s)' % sample_factor)
 
         # pdb.set_trace()
         if coch_mode == 'subband':
@@ -165,7 +173,7 @@ def test_cochleagram(rfn, erb_filter_mode='all', coch_mode='fast',verbose=0):
           assert np.allclose(subbands_dict['subbands'], mlab[subbands_key].T), 'subband mismatch: make_erb_cos_filters_nx(...)'
           if verbose > 0:
             print('\tPASSED Subbands: make_erb_cos_filters_nx(%s)' % sample_factor)
-        else:
+        elif coch_mode != 'coch':
           sub_envs_key = 'sub_envs_%s' % sample_factor
 
           # generate cochleagrams
@@ -201,7 +209,7 @@ def _get_coch_function(mode):
     coch_fx = sb.generate_subband_envelopes_alex_fast
   elif mode == 'standard':
     coch_fx = sb.generate_subband_envelopes
-  elif mode == 'subband':
+  elif mode == 'subband' or mode == 'coch':
     coch_fx = None
   else:
     raise ValueError('Unrecognized coch_fx mode: %s' % mode)
@@ -215,7 +223,7 @@ def test_run_dir(in_path, verbose=0):
       print('skipped test %s' % (i + 1))
       continue
 
-    test_cochleagram(f, erb_filter_mode='nx', coch_mode='fast', verbose=verbose)
+    test_cochleagram(f, erb_filter_mode='nx', coch_mode='coch', verbose=verbose)
     print('passed %s tests' % (i + 1))
 
 

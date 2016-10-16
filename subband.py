@@ -327,7 +327,7 @@ def generate_subbands(signal, filters, pad_factor=None, fft_mode='auto', debug_r
     return subbands
 
 
-def generate_analytic_subbands(signal, filters, pad_factor=None):
+def generate_analytic_subbands(signal, filters, pad_factor=None, fft_mode='auto'):
   """Generate the analytic subbands (i.e., hilbert transform) of the signal by
     applying the provided filters.
 
@@ -357,7 +357,7 @@ def generate_analytic_subbands(signal, filters, pad_factor=None):
       of the subband decomposition. This should have the same shape as
       `filters`.
   """
-  subbands = generate_subbands(signal, filters, pad_factor=pad_factor)
+  subbands = generate_subbands(signal, filters, pad_factor=pad_factor, fft_mode=fft_mode)
   # subbands = subbands[:, :signal.shape[0]/2]
   return scipy.signal.hilbert(subbands)
 
@@ -540,51 +540,3 @@ def _real_freq_filter(rfft_signal, filters):
   nr = rfft_signal.shape[0]
   subbands = filters[:, :nr] * rfft_signal
   return subbands
-
-
-def make_cochleagram_ray():
-  DUR = 50 / 1000
-  SR = 20000
-  LOW_LIM = 50
-  HI_LIM = 20000
-  N_HUMAN = np.floor(erb.freq2erb(HI_LIM) - erb.freq2erb(LOW_LIM)) - 1;
-  N_HUMAN = N_HUMAN.astype(int)
-  ENV_SR = 6000
-  PAD_FACTOR = 1
-  Q = SR // ENV_SR
-  F0 = 100
-
-  # t = utils.matlab_arange(0, 200/1000, SR)
-  t = np.arange(0, DUR + 1/SR, 1/SR)
-  ct = np.zeros_like(t)
-  for i in range(1,40+1):
-    ct += np.sin(2*np.pi*F0*i*t)
-  # ct = np.hstack((ct, np.zeros_like(ct)))
-
-  print(t.shape)
-
-  filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM,
-                                                     2, pad_factor=PAD_FACTOR, full_filter=True, strict=False)
-  # filts, hz_cutoffs, freqs = make_erb_cos_filters(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM, full_filter=True, strict=False)
-  print(filts.shape)
-
-  # downsample_fx = lambda x: scipy.signal.resample_poly(x, 6000, SR, axis=1)
-  # downsample_fx = lambda x: scipy.signal.decimate(x, 3, axis=1, ftype='fir') # this caused weird banding artifacts
-  downsample_fx = lambda x: scipy.signal.resample(x, np.ceil(x.shape[1]*(6000/SR)), axis=1)  # fourier method: this causes NANs that get converted to 0s
-  # sub_envs = generate_subband_envelopes(ct, filts, pad_factor=PAD_FACTOR, downsample=downsample_fx, nonlinearity='log')
-  sub_envs = generate_subband_envelopes_fast(ct, filts, pad_factor=PAD_FACTOR, downsample=downsample_fx, nonlinearity='log')
-
-  # img = np.flipud(sub_envs.T)
-  img = np.flipud(sub_envs)
-  print('sub env shape: ', sub_envs.shape )
-  # plt.imshow(img, cmap='inferno')
-  plt.matshow(img, cmap='inferno')
-  plt.show()
-
-
-def main():
-  make_cochleagram_ray()
-
-
-if __name__ == '__main__':
-  main()

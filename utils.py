@@ -25,7 +25,7 @@ def matlab_arange(start, stop, num):
   return np.linspace(start, stop, num + 1)
 
 
-def cochshow(cochleagram, interact=True):
+def cochshow(cochleagram, interact=True, cmap='viridis'):
   """Helper function to facilitate displaying cochleagrams.
 
   Args:
@@ -38,7 +38,7 @@ def cochshow(cochleagram, interact=True):
     AxesImage:
       **image**: Whatever matplotlib.pyplot.plt returns.
   """
-  f = imshow(cochleagram, aspect='auto', cmap='viridis')
+  f = imshow(cochleagram, aspect='auto', cmap=cmap)
   if interact:
     show()
   return f
