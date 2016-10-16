@@ -177,11 +177,8 @@ def test_cochleagram(rfn, erb_filter_mode='all', coch_mode='fast',verbose=0):
           sub_envs_key = 'sub_envs_%s' % sample_factor
 
           # generate cochleagrams
-          # downsample_fx = lambda x: scipy.signal.resample_poly(x, 6000, sr, axis=1)  ## DEBUG
-          downsample_fx = None
-          nonlinearity_fx = None
           start_time = time.time()
-          subband_envs = coch_fx(signal,filts, 1, downsample=downsample_fx, nonlinearity=nonlinearity_fx)
+          subband_envs = coch_fx(signal,filts, 1)
           tot_time = time.time() - start_time
           print('TIME --> %s' % tot_time)
 
@@ -223,7 +220,7 @@ def test_run_dir(in_path, verbose=0):
       print('skipped test %s' % (i + 1))
       continue
 
-    test_cochleagram(f, erb_filter_mode='nx', coch_mode='coch', verbose=verbose)
+    test_cochleagram(f, erb_filter_mode='nx', coch_mode='fast', verbose=verbose)
     print('passed %s tests' % (i + 1))
 
 

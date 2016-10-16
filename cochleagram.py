@@ -103,8 +103,7 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
 
   if ret_mode == 'envs' or ret_mode == 'all':
     sb_out = sb.generate_subband_envelopes_fast(signal, filts,
-        pad_factor=pad_factor, downsample=downsample, nonlinearity=nonlinearity,
-        fft_mode=fft_mode, debug_ret_all=ret_all_sb)
+        pad_factor=pad_factor, fft_mode=fft_mode, debug_ret_all=ret_all_sb)
   elif ret_mode == 'subband':
     sb_out = sb.generate_subbands(signal, filts, pad_factor=pad_factor,
         fft_mode=fft_mode, debug_ret_all=ret_all_sb)
@@ -113,6 +112,10 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
         fft_mode=fft_mode)
   else:
     raise NotImplementedError('`ret_mode` is not supported.')
+
+  if ret_mode == 'envs':
+    sb_out = apply_envelope_downsample(sb_out, downsample)
+    sb_out = apply_envelope_nonlinearity(sb_out, nonlinearity)
 
   if ret_mode == 'all':
     out_dict = {}
@@ -207,6 +210,92 @@ def batch_human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
   raise NotImplementedError()
 
 
+def apply_envelope_downsample(subband_envelopes, downsample):
+  """Apply a downsampling operation to cochleagram subband envelopes.
+
+  The `downsample` argument can be an downsampling factor, a callable
+  (to perform custom downsampling), or None to return the unmodified cochleagram.
+
+  Args:
+    subband_envelopes (array): Cochleagram subbands to downsample.
+    downsample (int, callable, None): Determines the downsampling operation
+      to apply to the cochleagram. If this is an int, assume that `downsample`
+      represents the downsampling factor and apply scipy.signal.decimate to the
+      cochleagram, over axis=1. If `downsample` is a python callable
+      (e.g., function), it will be applied to `subband_envelopes`. If this is
+      None, no  downsampling is performed and the unmodified cochleagram is
+      returned.
+
+  Returns:
+    array:
+    **downsampled_subband_envelopes**: The subband_envelopes after being
+      downsampled with `downsample`.
+  """
+  if downsample is None:
+    pass
+  elif callable(downsample):
+    # apply the downsampling function
+    subband_envelopes = downsample(subband_envelopes)
+  else:
+    # assume that downsample is the downsampling factor
+    # was BadCoefficients error with Chebyshev type I filter [default]
+    #   resample uses a fourier method and is needlessly long...
+    subband_envelopes = scipy.signal.decimate(subband_envelopes, downsample, axis=1, ftype='fir') # this caused weird banding artifacts
+    # subband_envelopes = scipy.signal.resample(subband_envelopes, np.ceil(subband_envelopes.shape[1]*(6000/SR)), axis=1)  # fourier method: this causes NANs that get converted to 0s
+    # subband_envelopes = scipy.signal.resample_poly(subband_envelopes, 6000, SR, axis=1)  # this requires v0.18 of scipy
+  subband_envelopes[subband_envelopes < 0] = 0
+  return subband_envelopes
+
+
+def apply_envelope_nonlinearity(subband_envelopes, nonlinearity):
+  """Apply a nonlinearity to the cochleagram.
+
+  The `nonlinearity` argument can be an predefined type, a callable
+  (to apply a custom nonlinearity), or None to return the unmodified
+  cochleagram.
+
+  Args:
+    subband_envelopes (array): Cochleagram to apply the nonlinearity to.
+    nonlinearity (str, callable, None): Determines the nonlinearity operation
+      to apply to the cochleagram. If this is a valid string, one of the
+      predefined nonlinearities will be used. It can be: 'power' to perform
+      np.power(subband_envelopes, 3.0 / 10.0) or 'log' to perform
+      20 * np.log10(subband_envelopes / np.max(subband_envelopes)).
+      If `nonlinearity` is a python callable (e.g., function), it will be
+      applied to `subband_envelopes`. If this is None, no nonlinearity is
+      applied and the unmodified cochleagram is returned.
+
+  Returns:
+    array:
+    **nonlinear_subband_envelopes**: The subband_envelopes with the specified
+      nonlinearity applied.
+
+  Raises:
+      ValueError: Error if the provided `nonlinearity` isn't a recognized
+      option.
+  """
+  # apply nonlinearity
+  if nonlinearity is None:
+    pass
+  elif nonlinearity == "power":
+    subband_envelopes = np.power(subband_envelopes, 3.0 / 10.0)  # from Alex's code
+  elif nonlinearity == "log":
+    print(subband_envelopes.dtype)
+    dtype_eps = np.finfo(subband_envelopes.dtype).eps
+    # subband_envelopes[subband_envelopes <= 0] += dtype_eps
+    subband_envelopes[subband_envelopes == 0] = dtype_eps
+    # subband_envelopes = np.log(subband_envelopes)  # adapted from Alex's code
+    subband_envelopes = 20 * np.log10(subband_envelopes / np.max(subband_envelopes))  # adapted from Anastasiya's code
+    # a = subband_envelopes / np.max(subband_envelopes)
+    # a[a <= 0] = dtype_eps
+    # subband_envelopes = 20 * np.log10(a)  # adapted from Anastasiya's code
+  elif callable(nonlinearity):
+    subband_envelopes = nonlinearity(subband_envelopes)
+  else:
+    raise ValueError('argument "nonlinearity" must be "power", "log", or a function.')
+  return subband_envelopes
+
+
 def demo_human_cochleagram(signal=None):
   """Demo the cochleagram generation.
 
@@ -242,10 +331,10 @@ def demo_human_cochleagram(signal=None):
   # nonlinearity_fx = 'log'
   # nonlinearity_fx = 'power'
 
-  human_coch = human_cochleagram(signal, sr, strict=False)
-  # human_coch = human_cochleagram(signal, sr, n=n, sample_factor=2,
-  #     pad_factor=pad_factor, downsample=downsample_fx, nonlinearity=nonlinearity_fx,
-  #     ret_mode='envs', strict=False)
+  # human_coch = human_cochleagram(signal, sr, strict=False)
+  human_coch = human_cochleagram(signal, sr, n=n, sample_factor=2,
+      pad_factor=pad_factor, downsample=downsample_fx, nonlinearity=nonlinearity_fx,
+      ret_mode='envs', strict=False)
 
   img = np.flipud(human_coch)
   print('sub env shape: ', human_coch.shape)
