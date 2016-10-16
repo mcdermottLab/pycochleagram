@@ -45,8 +45,7 @@ def reshape_signal_canonical(signal):
   return out_signal
 
 
-def generate_subband_envelopes_fast(signal, filters, pad_factor=None,
-      downsample=None, nonlinearity=None, fft_mode='auto', debug_ret_all=False):
+def generate_subband_envelopes_fast(signal, filters, pad_factor=None, fft_mode='auto', debug_ret_all=False):
   """Generate the subband envelopes (i.e., the cochleagram) of the signal by
   applying the provided filters.
 
@@ -76,18 +75,6 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None,
       to the end of the input signal until is it of length
       `pad_factor * length(signal)`. This padded region will be removed after
       performing the subband decomposition.
-    downsample (None, int, callable, optional): The `downsample` argument can
-      be an downsampling factor, a callable (to perform custom downsampling),
-      or None to return the unmodified cochleagram; see
-      `apply_envelope_downsample` for more information. This will be applied
-      to the cochleagram before the nonlinearity. Providing a callable for
-      custom downsampling is suggested.
-    nonlinearity (None, int, callable, optional): The `nonlinearity` argument
-      can be an predefined type, a callable (to apply a custom nonlinearity),
-      or None to return the unmodified cochleagram; see
-      `apply_envelope_nonlinearity` for more information. This will be applied
-      to the cochleagram after downsampling. Providing a callable for applying
-      a custom nonlinearity is suggested.
     fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
       to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
       will fallback to numpy, if necessary.
@@ -95,9 +82,7 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None,
   Returns:
     array:
     **subband_envelopes**: The subband envelopes (i.e., cochleagram) resulting from
-      the subband decomposition. If a downsampling and/or nonlinearity
-      operation was requested, the output will reflect these operations.
-      This should have the same shape as `filters`.
+      the subband decomposition. This should have the same shape as `filters`.
   """
   # convert the signal to a canonical representation
   signal_flat = reshape_signal_canonical(signal)
@@ -122,9 +107,6 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None,
     analytic_subbands = analytic_subbands[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
     subband_envelopes = subband_envelopes[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
 
-  subband_envelopes = apply_envelope_downsample(subband_envelopes, downsample)
-  subband_envelopes = apply_envelope_nonlinearity(subband_envelopes, nonlinearity)
-
   if debug_ret_all is True:
     out_dict = {}
     # add all local variables to out_dict
@@ -136,8 +118,7 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None,
     return subband_envelopes
 
 
-def generate_subband_envelopes_alex_fast(signal, filters, pad_factor=None,
-      downsample=None, nonlinearity=None, debug_ret_all=False):
+def generate_subband_envelopes_alex_fast(signal, filters, pad_factor=None, debug_ret_all=False):
   """Generate the subband envelopes (i.e., the cochleagram) of the signal by
   applying the provided filters.
 
@@ -169,18 +150,6 @@ def generate_subband_envelopes_alex_fast(signal, filters, pad_factor=None,
       to the end of the input signal until is it of length
       `pad_factor * length(signal)`. This padded region will be removed after
       performing the subband decomposition.
-    downsample (None, int, callable, optional): The `downsample` argument can
-      be an downsampling factor, a callable (to perform custom downsampling),
-      or None to return the unmodified cochleagram; see
-      `apply_envelope_downsample` for more information. This will be applied
-      to the cochleagram before the nonlinearity. Providing a callable for
-      custom downsampling is suggested.
-    nonlinearity (None, int, callable, optional): The `nonlinearity` argument
-      can be an predefined type, a callable (to apply a custom nonlinearity),
-      or None to return the unmodified cochleagram; see
-      `apply_envelope_nonlinearity` for more information. This will be applied
-      to the cochleagram after downsampling. Providing a callable for applying
-      a custom nonlinearity is suggested.
     fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
       to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
       will fallback to numpy, if necessary.
@@ -188,9 +157,7 @@ def generate_subband_envelopes_alex_fast(signal, filters, pad_factor=None,
   Returns:
     array:
     **subband_envelopes**: The subband envelopes (i.e., cochleagram) resulting from
-      the subband decomposition. If a downsampling and/or nonlinearity
-      operation was requested, the output will reflect these operations.
-      This should have the same shape as `filters`.
+      the subband decomposition. This should have the same shape as `filters`.
   """
   warnings.warn('Function is deprecated; use generate_subband_envelopes_fast instead', DeprecationWarning)
 
@@ -243,9 +210,6 @@ def generate_subband_envelopes_alex_fast(signal, filters, pad_factor=None,
   if pad_factor is not None and pad_factor >= 1:
     analytic_subbands = analytic_subbands[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
     subband_envelopes = subband_envelopes[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
-
-  subband_envelopes = apply_envelope_downsample(subband_envelopes, downsample)
-  subband_envelopes = apply_envelope_nonlinearity(subband_envelopes, nonlinearity)
 
   if debug_ret_all is True:
     out_dict = {}
@@ -362,14 +326,12 @@ def generate_analytic_subbands(signal, filters, pad_factor=None, fft_mode='auto'
   return scipy.signal.hilbert(subbands)
 
 
-def generate_subband_envelopes(signal, filters, pad_factor=None, downsample=None, nonlinearity=None, debug_ret_all=False):
+def generate_subband_envelopes(signal, filters, pad_factor=None, debug_ret_all=False):
   """Generate the subband envelopes (i.e., the cochleagram) of the signal by
     applying the provided filters.
 
   The input filters are applied to the signal to perform subband decomposition.
-  The signal can be optionally zero-padded before the decomposition. The
-  resulting cochleagram can be optionally downsampled and then modified with a
-  nonlinearity.
+  The signal can be optionally zero-padded before the decomposition.
 
   Args:
     signal (array): The sound signal (waveform) in the time domain.
@@ -382,18 +344,6 @@ def generate_subband_envelopes(signal, filters, pad_factor=None, downsample=None
       input signal until is it of length `pad_factor * length(signal)`. This
       padded region will be removed after performing the subband
       decomposition.
-    downsample (None, int, callable, optional): The `downsample` argument can
-      be an downsampling factor, a callable (to perform custom downsampling),
-      or None to return the unmodified cochleagram; see
-      apply_envelope_downsample for more information. This will be applied
-      to the cochleagram before the nonlinearity. Providing a callable for
-      custom downsampling is suggested.
-    nonlinearity (None, int, callable, optional): The `nonlinearity` argument
-      can be an predefined type, a callable (to apply a custom nonlinearity),
-      or None to return the unmodified cochleagram; see
-      apply_envelope_nonlinearity for more information. This will be applied
-      to the cochleagram after downsampling. Providing a callable for applying
-      a custom nonlinearity is suggested.
     fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
       to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
       will fallback to numpy, if necessary.
@@ -401,15 +351,10 @@ def generate_subband_envelopes(signal, filters, pad_factor=None, downsample=None
   Returns:
     array:
     **subband_envelopes**: The subband envelopes (i.e., cochleagram) resulting from
-      the subband decomposition. If a downsampling and/or nonlinearity
-      operation was requested, the output will reflect these operations.
-      This should have the same shape as `filters`.
+      the subband decomposition. This should have the same shape as `filters`.
   """
   analytic_subbands = generate_analytic_subbands(signal, filters, pad_factor=pad_factor)
   subband_envelopes = np.abs(analytic_subbands)
-
-  subband_envelopes = apply_envelope_downsample(subband_envelopes, downsample)
-  subband_envelopes = apply_envelope_nonlinearity(subband_envelopes, nonlinearity)
 
   if debug_ret_all is True:
     out_dict = {}
@@ -446,92 +391,6 @@ def pad_signal(signal, pad_factor, axis=0):
     padding_size = 0
     pad_signal = signal
   return (pad_signal, padding_size)
-
-
-def apply_envelope_downsample(subband_envelopes, downsample):
-  """Apply a downsampling operation to cochleagram subband envelopes.
-
-  The `downsample` argument can be an downsampling factor, a callable
-  (to perform custom downsampling), or None to return the unmodified cochleagram.
-
-  Args:
-    subband_envelopes (array): Cochleagram subbands to downsample.
-    downsample (int, callable, None): Determines the downsampling operation
-      to apply to the cochleagram. If this is an int, assume that `downsample`
-      represents the downsampling factor and apply scipy.signal.decimate to the
-      cochleagram, over axis=1. If `downsample` is a python callable
-      (e.g., function), it will be applied to `subband_envelopes`. If this is
-      None, no  downsampling is performed and the unmodified cochleagram is
-      returned.
-
-  Returns:
-    array:
-    **downsampled_subband_envelopes**: The subband_envelopes after being
-      downsampled with `downsample`.
-  """
-  if downsample is None:
-    pass
-  elif callable(downsample):
-    # apply the downsampling function
-    subband_envelopes = downsample(subband_envelopes)
-  else:
-    # assume that downsample is the downsampling factor
-    # was BadCoefficients error with Chebyshev type I filter [default]
-    #   resample uses a fourier method and is needlessly long...
-    subband_envelopes = scipy.signal.decimate(subband_envelopes, downsample, axis=1, ftype='fir') # this caused weird banding artifacts
-    # subband_envelopes = scipy.signal.resample(subband_envelopes, np.ceil(subband_envelopes.shape[1]*(6000/SR)), axis=1)  # fourier method: this causes NANs that get converted to 0s
-    # subband_envelopes = scipy.signal.resample_poly(subband_envelopes, 6000, SR, axis=1)  # this requires v0.18 of scipy
-  subband_envelopes[subband_envelopes < 0] = 0
-  return subband_envelopes
-
-
-def apply_envelope_nonlinearity(subband_envelopes, nonlinearity):
-  """Apply a nonlinearity to the cochleagram.
-
-  The `nonlinearity` argument can be an predefined type, a callable
-  (to apply a custom nonlinearity), or None to return the unmodified
-  cochleagram.
-
-  Args:
-    subband_envelopes (array): Cochleagram to apply the nonlinearity to.
-    nonlinearity (str, callable, None): Determines the nonlinearity operation
-      to apply to the cochleagram. If this is a valid string, one of the
-      predefined nonlinearities will be used. It can be: 'power' to perform
-      np.power(subband_envelopes, 3.0 / 10.0) or 'log' to perform
-      20 * np.log10(subband_envelopes / np.max(subband_envelopes)).
-      If `nonlinearity` is a python callable (e.g., function), it will be
-      applied to `subband_envelopes`. If this is None, no nonlinearity is
-      applied and the unmodified cochleagram is returned.
-
-  Returns:
-    array:
-    **nonlinear_subband_envelopes**: The subband_envelopes with the specified
-      nonlinearity applied.
-
-  Raises:
-      ValueError: Error if the provided `nonlinearity` isn't a recognized
-      option.
-  """
-  # apply nonlinearity
-  if nonlinearity is None:
-    pass
-  elif nonlinearity == "power":
-    subband_envelopes = np.power(subband_envelopes, 3.0 / 10.0)  # from Alex's code
-  elif nonlinearity == "log":
-    print(subband_envelopes.dtype)
-    dtype_eps = np.finfo(subband_envelopes.dtype).eps
-    # subband_envelopes[subband_envelopes <= 0] += dtype_eps
-    subband_envelopes[subband_envelopes == 0] = dtype_eps
-    # subband_envelopes = np.log(subband_envelopes)  # adapted from Alex's code
-    subband_envelopes = 20 * np.log10(subband_envelopes / np.max(subband_envelopes))  # adapted from Anastasiya's code
-    # a = subband_envelopes / np.max(subband_envelopes)
-    # a[a <= 0] = dtype_eps
-    # subband_envelopes = 20 * np.log10(a)  # adapted from Anastasiya's code
-  elif callable(nonlinearity):
-    subband_envelopes = nonlinearity(subband_envelopes)
-  else:
-    raise ValueError('argument "nonlinearity" must be "power", "log", or a function.')
-  return subband_envelopes
 
 
 def _real_freq_filter(rfft_signal, filters):
