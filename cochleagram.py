@@ -213,13 +213,26 @@ def batch_human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
   raise NotImplementedError()
 
 
-def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=-100, n_iter=5, test=None):
-  # decompress
+def invert_cochleagram_with_filterbank(cochleagram, filters, sr, env_sr=None, target_rms=100, downsample=None, nonlinearity=None, n_iter=5, test=None):
+  coch_length = cochleagram.shape[1]
+  # decompress envelopes
+  print(nonlinearity)
+  cochleagram = apply_envelope_nonlinearity(cochleagram, nonlinearity, invert=True)
 
-  # upsample
+  # # upsample
+  # if env_sr is None:
+  #   env_sr = sr
+  # ds_factor = sr / env_sr
+  # synth_size = ds_factor * coch_length
+  # cochleagram = apply_envelope_downsample(cochleagram, downsample, invert=True)
+
+  # dT = 1 / ds_factor
+  # x = utils.matlab_arange(1, coch_length)
+  # xI = utils.matlab_arange(dT, coch_length, dT)
+  # upsampledEnv = interp1(x, xI, cochleagram)
 
   # generated signal starts from noise
-  synth_size = cochleagram.shape[1]
+  synth_size = coch_length
   print('inv coch sig size: ', synth_size)
   synth_sound = np.random.random(synth_size)  # uniform noise
   # synth_sound = np.random.randn(synth_size)  # gaussian noise
@@ -228,7 +241,7 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=-100
 
   # iteratively enforce envelopes on cochleagram of iter_noise
   for i in range(n_iter):
-    if i % 2 == 0:
+    if i % 100 == 0:
       if i > 0:
         plt.subplot(211)
         plt.title('Original Cochleagram')
@@ -257,7 +270,7 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=-100
 
 
 def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
-        pad_factor=None, env_sr=None, n_iter=1000, strict=True, test=None):
+        pad_factor=None, env_sr=None, downsample=None, nonlinearity=None, n_iter=1000, strict=True, test=None):
   print(locals())
   signal_length = cochleagram.shape[1]
   # generate filterbank
@@ -265,12 +278,12 @@ def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
       sr, n, low_lim, hi_lim, sample_factor, pad_factor=pad_factor,
       full_filter=True, strict=strict)
 
-  out_sig = invert_cochleagram_with_filterbank(cochleagram, filts, sr, n_iter=n_iter, test=test)
+  out_sig = invert_cochleagram_with_filterbank(cochleagram, filts, sr, n_iter=n_iter, nonlinearity=nonlinearity, test=test)
 
   return out_sig
 
 
-def apply_envelope_downsample(subband_envelopes, downsample):
+def apply_envelope_downsample(subband_envelopes, downsample, env_sr=None, audio_sr=None, invert=False):
   """Apply a downsampling operation to cochleagram subband envelopes.
 
   The `downsample` argument can be an downsampling factor, a callable
@@ -297,17 +310,34 @@ def apply_envelope_downsample(subband_envelopes, downsample):
     # apply the downsampling function
     subband_envelopes = downsample(subband_envelopes)
   else:
-    # assume that downsample is the downsampling factor
-    # was BadCoefficients error with Chebyshev type I filter [default]
-    #   resample uses a fourier method and is needlessly long...
-    subband_envelopes = scipy.signal.decimate(subband_envelopes, downsample, axis=1, ftype='fir') # this caused weird banding artifacts
-    # subband_envelopes = scipy.signal.resample(subband_envelopes, np.ceil(subband_envelopes.shape[1]*(6000/SR)), axis=1)  # fourier method: this causes NANs that get converted to 0s
-    # subband_envelopes = scipy.signal.resample_poly(subband_envelopes, 6000, SR, axis=1)  # this requires v0.18 of scipy
+    downsample = downsample.lower()
+    if audio_sr is None:
+      raise ValueError('`audio_sr` cannot be None. Provide sampling rate of original audio signal.')
+    if env_sr is None:
+      raise ValueError('`env_sr` cannot be None. Provide sampling rate of subband envelopes (cochleagram).')
+
+    if downsample == 'decimate':
+      if invert:
+        raise NotImplementedError()
+      else:
+        # assume that downsample is the downsampling factor
+        # was BadCoefficients error with Chebyshev type I filter [default]
+        subband_envelopes = scipy.signal.decimate(subband_envelopes, audio_sr // env_sr, axis=1, ftype='fir') # this caused weird banding artifacts
+    if downsample == 'resample':
+      if invert:
+        subband_envelopes = scipy.signal.resample(subband_envelopes, np.ceil(subband_envelopes.shape[1]*(audio_sr/env_sr)), axis=1)  # fourier method: this causes NANs that get converted to 0s
+      else:
+        subband_envelopes = scipy.signal.resample(subband_envelopes, np.ceil(subband_envelopes.shape[1]*(env_sr/audio_sr)), axis=1)  # fourier method: this causes NANs that get converted to 0s
+    if downsample == 'poly':
+      if invert:
+        subband_envelopes = scipy.signal.resample_poly(subband_envelopes, audio_sr, env_sr, axis=1)  # this requires v0.18 of scipy
+      else:
+        subband_envelopes = scipy.signal.resample_poly(subband_envelopes, env_sr, audio_sr, axis=1)  # this requires v0.18 of scipy
   subband_envelopes[subband_envelopes < 0] = 0
   return subband_envelopes
 
 
-def apply_envelope_nonlinearity(subband_envelopes, nonlinearity):
+def apply_envelope_nonlinearity(subband_envelopes, nonlinearity, invert=False):
   """Apply a nonlinearity to the cochleagram.
 
   The `nonlinearity` argument can be an predefined type, a callable
@@ -338,17 +368,23 @@ def apply_envelope_nonlinearity(subband_envelopes, nonlinearity):
   if nonlinearity is None:
     pass
   elif nonlinearity == "power":
-    subband_envelopes = np.power(subband_envelopes, 3.0 / 10.0)  # from Alex's code
+    if invert:
+      subband_envelopes = np.power(subband_envelopes, 10.0 / 3.0)  # from Alex's code
+    else:
+      subband_envelopes = np.power(subband_envelopes, 3.0 / 10.0)  # from Alex's code
   elif nonlinearity == "log":
-    print(subband_envelopes.dtype)
-    dtype_eps = np.finfo(subband_envelopes.dtype).eps
-    # subband_envelopes[subband_envelopes <= 0] += dtype_eps
-    subband_envelopes[subband_envelopes == 0] = dtype_eps
-    # subband_envelopes = np.log(subband_envelopes)  # adapted from Alex's code
-    subband_envelopes = 20 * np.log10(subband_envelopes / np.max(subband_envelopes))  # adapted from Anastasiya's code
-    # a = subband_envelopes / np.max(subband_envelopes)
-    # a[a <= 0] = dtype_eps
-    # subband_envelopes = 20 * np.log10(a)  # adapted from Anastasiya's code
+    if invert:
+      # subband_envelopes = np.log(subband_envelopes)  # adapted from Alex's code
+      subband_envelopes = np.power(10, subband_envelopes / 20)  # adapted from Anastasiya's code
+    else:
+      dtype_eps = np.finfo(subband_envelopes.dtype).eps
+      # subband_envelopes[subband_envelopes <= 0] += dtype_eps
+      subband_envelopes[subband_envelopes == 0] = dtype_eps
+      # subband_envelopes = np.log(subband_envelopes)  # adapted from Alex's code
+      subband_envelopes = 20 * np.log10(subband_envelopes / np.max(subband_envelopes))  # adapted from Anastasiya's code
+      # a = subband_envelopes / np.max(subband_envelopes)
+      # a[a <= 0] = dtype_eps
+      # subband_envelopes = 20 * np.log10(a)  # adapted from Anastasiya's code
   elif callable(nonlinearity):
     subband_envelopes = nonlinearity(subband_envelopes)
   else:
@@ -441,12 +477,36 @@ def demo_invert_cochleagram(signal=None, sr=None):
     for i in range(1,40+1):
       signal += np.sin(2 * np.pi * f0 * i * t)
 
-  coch = human_cochleagram(signal, sr, strict=False)
+  downsample_fx = None
+  # downsample_fx = 'poly'
+  env_sr = 6000
+
+  nonlinearity_fx = None
+  # nonlinearity_fx = 'log'
+  # nonlinearity_fx = 'power'
+
+  coch = human_cochleagram(signal, sr, downsample=downsample_fx, nonlinearity=nonlinearity_fx, strict=False)
   # coch = np.flipud(coch)
-  # utils.cochshow(coch)
+  downsample_fx = 'poly'
+  plt.subplot(311)
+  utils.cochshow(coch, interact=False)
+  print(coch.shape)
+  plt.subplot(312)
+  coch = apply_envelope_downsample(coch, downsample_fx, env_sr, sr, invert=False)
+  # # coch = coch ** (3/10)
+  # max_coch = coch.max()
+  # coch = 20 * np.log10(coch / coch.max())
+  utils.cochshow(coch, interact=False)
+  plt.subplot(313)
+  # inv_coch = apply_envelope_nonlinearity(coch, nonlinearity_fx, invert=True)
+  inv_coch = apply_envelope_downsample(coch, downsample_fx, env_sr, sr, invert=True)
+  # # inv_coch = coch ** (10/3)
+  # inv_coch = np.power(10, coch / 20)
+  print(inv_coch.shape)
+  utils.cochshow(inv_coch)
 
   test = lambda: utils.play_array(signal, ignore_warning=True)
-  invert_cochleagram(coch, sr, n, low_lim, hi_lim, sample_factor, pad_factor=None, strict=False, test=test)
+  invert_cochleagram(coch, sr, n, low_lim, hi_lim, sample_factor, pad_factor=None, nonlinearity=nonlinearity_fx, strict=False, test=test)
 
 
 def main():
