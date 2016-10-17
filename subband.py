@@ -321,9 +321,19 @@ def generate_analytic_subbands(signal, filters, pad_factor=None, fft_mode='auto'
       of the subband decomposition. This should have the same shape as
       `filters`.
   """
-  subbands = generate_subbands(signal, filters, pad_factor=pad_factor, fft_mode=fft_mode)
-  # subbands = subbands[:, :signal.shape[0]/2]
-  return scipy.signal.hilbert(subbands)
+  signal_flat = reshape_signal_canonical(signal)
+
+  if pad_factor is not None and pad_factor > 1:
+    signal_flat, padding = pad_signal(signal_flat, pad_factor)
+
+  fft_sample = utils.fft(signal_flat, mode=fft_mode)
+  subbands = filters * fft_sample
+  analytic_subbands = utils.fhilbert(subbands, mode=fft_mode)
+
+  if pad_factor is not None and pad_factor > 1:
+    analytic_subbands = analytic_subbands[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
+
+  return analytic_subbands
 
 
 def generate_subband_envelopes(signal, filters, pad_factor=None, debug_ret_all=False):
