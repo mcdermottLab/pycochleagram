@@ -281,7 +281,7 @@ def rfft(a, n=None, axis=-1, mode='auto', params=None):
   # handle 'auto' mode
   mode, params = _parse_fft_mode(mode, params)
   # named args override params
-  d1 = {'n': n, 'axis': axis, 'norm': norm}
+  d1 = {'n': n, 'axis': axis}
   params = dict(d1, **params)
 
   if mode == 'fftw':
