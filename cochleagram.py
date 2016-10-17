@@ -296,13 +296,17 @@ def apply_envelope_nonlinearity(subband_envelopes, nonlinearity):
   return subband_envelopes
 
 
-def demo_human_cochleagram(signal=None):
+def demo_human_cochleagram(signal=None, sr=None, downsample=None, nonlinearity=None, interact=True):
   """Demo the cochleagram generation.
 
     signal (array, optional): If a time-domain signal is provided, its
       cochleagram will be generated with some sensible parameters. If this is
       None, a synthesized tone (harmonic stack of the first 40 harmonics) will
       be used.
+    downsample({'poly', 'resample', 'decimate', None}): Determines downsampling
+      method to apply.
+    nonlinearity({'log', 'power', None}): Determines nonlinearity method to
+      apply.
   """
   if signal is None:
     dur = 50 / 1000
@@ -322,14 +326,25 @@ def demo_human_cochleagram(signal=None):
     for i in range(1,40+1):
       signal += np.sin(2 * np.pi * f0 * i * t)
 
-  downsample_fx = None
-  # downsample_fx = lambda x: scipy.signal.resample_poly(x, 6000, sr, axis=1)
-  # downsample_fx = lambda x: scipy.signal.decimate(x, 3, axis=1, ftype='fir') # this caused weird banding artifacts
-  # downsample_fx = lambda x: scipy.signal.resample(x, np.ceil(x.shape[1]*(6000/sr)), axis=1)  # fourier method: this causes NANs that get converted to 0s
+  if downsample is None:
+    downsample_fx = None
+  elif downsample == 'poly':
+    downsample_fx = lambda x: scipy.signal.resample_poly(x, env_sr, sr, axis=1)
+  elif downsample == 'resample':
+    downsample_fx = lambda x: scipy.signal.decimate(x, q, axis=1, ftype='fir') # this caused weird banding artifacts
+  elif downsample == 'decimate':
+    downsample_fx = lambda x: scipy.signal.resample(x, np.ceil(x.shape[1]*(env_sr/sr)), axis=1)  # fourier method: this causes NANs that get converted to 0s
+  else:
+    raise NotImplementedError()
 
-  nonlinearity_fx = None
-  # nonlinearity_fx = 'log'
-  # nonlinearity_fx = 'power'
+  if nonlinearity is None:
+    nonlinearity_fx = None
+  elif nonlinearity == 'log':
+    nonlinearity_fx = 'log'
+  elif nonlinearity == 'power':
+    nonlinearity_fx = 'power'
+  else:
+    raise NotImplementedError()
 
   # human_coch = human_cochleagram(signal, sr, strict=False)
   human_coch = human_cochleagram(signal, sr, n=n, sample_factor=2,
@@ -337,15 +352,8 @@ def demo_human_cochleagram(signal=None):
       ret_mode='envs', strict=False)
 
   img = np.flipud(human_coch)
-  print('sub env shape: ', human_coch.shape)
-  utils.cochshow(img)
+  if interact:
+    print('sub env shape: ', human_coch.shape)
+    utils.cochshow(img)
 
-  return human_coch
-
-
-def main():
-  demo_human_cochleagram()
-
-
-if __name__ == '__main__':
-  main()
+  return img, {'signal': signal, 'sr': sr}
