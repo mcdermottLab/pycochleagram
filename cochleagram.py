@@ -3,12 +3,15 @@ from __future__ import division
 from __future__ import print_function
 
 import warnings
+from time import sleep
 import numpy as np
 import scipy.signal
 
 import erbfilter as erb
 import subband as sb
 import utils
+
+import matplotlib.pyplot as plt
 
 
 def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
@@ -210,6 +213,63 @@ def batch_human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
   raise NotImplementedError()
 
 
+def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=-100, n_iter=5, test=None):
+  # decompress
+
+  # upsample
+
+  # generated signal starts from noise
+  synth_size = cochleagram.shape[1]
+  print('inv coch sig size: ', synth_size)
+  synth_sound = np.random.random(synth_size)  # uniform noise
+  # synth_sound = np.random.randn(synth_size)  # gaussian noise
+
+  target_subband_mags = target_rms  # don't know what this is
+
+  # iteratively enforce envelopes on cochleagram of iter_noise
+  for i in range(n_iter):
+    if i % 2 == 0:
+      if i > 0:
+        plt.subplot(211)
+        plt.title('Original Cochleagram')
+        utils.cochshow(cochleagram, interact=False)
+        plt.subplot(212)
+        plt.title('Synth Cochleagram iter: %s' % i)
+        utils.cochshow(np.abs(synth_analytic_subbands))
+      test()
+      sleep(1)
+      utils.play_array(synth_sound, ignore_warning=True)
+      sleep(1)
+
+    print('inverting iteration: %s' % (i + 1))
+    synth_sound = target_rms / utils.rms(synth_sound) * synth_sound
+
+    # GET THE ERROR OF ENVS FROM DOWNSAMPLING
+    synth_analytic_subbands = sb.generate_analytic_subbands(synth_sound, filters)
+    synth_subband_mags = np.abs(synth_analytic_subbands)  # complex magnitude
+    # synth_subband_phases = np.angle(synth_analytic_subbands)  # complex phases
+    synth_subband_phases = synth_analytic_subbands / synth_subband_mags  # don't know what this is, from alex's code, converges faster
+
+    synth_subbands = synth_subband_phases * cochleagram
+    synth_subbands = np.real(synth_subbands)
+    np.nan_to_num(synth_size)
+    synth_sound = sb.collapse_subbands(synth_subbands, filters)
+
+
+def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
+        pad_factor=None, env_sr=None, n_iter=1000, strict=True, test=None):
+  print(locals())
+  signal_length = cochleagram.shape[1]
+  # generate filterbank
+  filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(signal_length,
+      sr, n, low_lim, hi_lim, sample_factor, pad_factor=pad_factor,
+      full_filter=True, strict=strict)
+
+  out_sig = invert_cochleagram_with_filterbank(cochleagram, filts, sr, n_iter=n_iter, test=test)
+
+  return out_sig
+
+
 def apply_envelope_downsample(subband_envelopes, downsample):
   """Apply a downsampling operation to cochleagram subband envelopes.
 
@@ -319,21 +379,21 @@ def demo_human_cochleagram(signal=None, sr=None, downsample=None, nonlinearity=N
     hi_lim = 20000
     n = None
 
-
     # t = utils.matlab_arange(0, 200/1000, SR)
     t = np.arange(0, dur + 1 / sr, 1 / sr)
     signal = np.zeros_like(t)
     for i in range(1,40+1):
       signal += np.sin(2 * np.pi * f0 * i * t)
+    # print(signal.shape)
 
   if downsample is None:
     downsample_fx = None
   elif downsample == 'poly':
     downsample_fx = lambda x: scipy.signal.resample_poly(x, env_sr, sr, axis=1)
   elif downsample == 'resample':
-    downsample_fx = lambda x: scipy.signal.decimate(x, q, axis=1, ftype='fir') # this caused weird banding artifacts
-  elif downsample == 'decimate':
     downsample_fx = lambda x: scipy.signal.resample(x, np.ceil(x.shape[1]*(env_sr/sr)), axis=1)  # fourier method: this causes NANs that get converted to 0s
+  elif downsample == 'decimate':
+    downsample_fx = lambda x: scipy.signal.decimate(x, q, axis=1, ftype='fir') # this caused weird banding artifacts
   else:
     raise NotImplementedError()
 
@@ -357,3 +417,41 @@ def demo_human_cochleagram(signal=None, sr=None, downsample=None, nonlinearity=N
     utils.cochshow(img)
 
   return img, {'signal': signal, 'sr': sr}
+
+
+def demo_invert_cochleagram(signal=None, sr=None):
+  if signal is None:
+    dur = 50 / 1000
+    sr = 20000
+    env_sr = 6000
+    pad_factor = 1
+    q = sr // env_sr
+    f0 = 100
+    low_lim = 50
+    hi_lim = 20000
+    n = None
+    if n is None:
+      n = int(np.floor(erb.freq2erb(hi_lim) - erb.freq2erb(low_lim)) - 1)
+
+    sample_factor = 2
+
+    # t = utils.matlab_arange(0, 200/1000, SR)
+    t = np.arange(0, dur + 1 / sr, 1 / sr)
+    signal = np.zeros_like(t)
+    for i in range(1,40+1):
+      signal += np.sin(2 * np.pi * f0 * i * t)
+
+  coch = human_cochleagram(signal, sr, strict=False)
+  # coch = np.flipud(coch)
+  # utils.cochshow(coch)
+
+  test = lambda: utils.play_array(signal, ignore_warning=True)
+  invert_cochleagram(coch, sr, n, low_lim, hi_lim, sample_factor, pad_factor=None, strict=False, test=test)
+
+
+def main():
+  demo_invert_cochleagram()
+
+
+if __name__ == '__main__':
+  main()

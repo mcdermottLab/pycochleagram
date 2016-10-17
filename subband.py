@@ -377,6 +377,46 @@ def generate_subband_envelopes(signal, filters, pad_factor=None, debug_ret_all=F
     return subband_envelopes
 
 
+def collapse_subbands(subbands, filters, fft_mode='auto', is_envs=False, which_nl=None):
+    """
+    take your subbands and collapse them into a waveform
+    """
+    # if which_nl is None:
+    #   which_nl = self.which_nl
+
+    # fft_filts = self._fft_filts
+
+    # if is_envs:
+    #   # gensbs --> compress --> downsample
+    #   # so here: --> upsample --> uncompress
+
+    #   # upsample
+    #   subbands = signal.resample(subbands, self.database_sr, axis=1)
+    #   subbands[subbands<0] = 0
+
+    #   # uncompress
+    #   if which_nl=="power":
+    #     subbands = subbands**(10.0/3.0)
+    #   elif which_nl=="log":
+    #     subbands = np.e**subbands - self._eps_avoid_inf_log
+
+    # # zeropad
+    # if self.do_zeropad_before_fft:
+    #   subbands = np.concatenate((subbands, np.zeros(subbands.shape)), axis=1)
+
+    # print('sb pre shape ', subbands.shape)
+    fft_subbands = filters * utils.fft(subbands, mode=fft_mode)
+    # subbands = utils.ifft(fft_subbands)
+    subbands = np.real(utils.ifft(fft_subbands, mode=fft_mode))
+    # print('sb post signal shape: ', subbands.shape)
+    signal = subbands.sum(axis=0)
+    # print('collapse subbands signal shape: ', signal.shape)
+
+    # if self.do_zeropad_before_fft:
+    #     wav = wav[:wav.size/2]
+    return signal
+
+
 def pad_signal(signal, pad_factor, axis=0):
   """Pad the signal by appending zeros to the end. The padded signal has
   length `pad_factor * length(signal)`.

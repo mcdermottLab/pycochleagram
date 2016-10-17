@@ -28,6 +28,14 @@ def matlab_arange(start, stop, num):
   return np.linspace(start, stop, num + 1)
 
 
+def rms(a):
+  return np.sqrt(np.mean(a * a))
+
+
+def dbsnr(self, s, n):
+    return 20 * np.log10(rms(s) / rms(n))
+
+
 ##### Display and Playback Methods #####
 def cochshow(cochleagram, interact=True, cmap='viridis'):
   """Helper function to facilitate displaying cochleagrams.
