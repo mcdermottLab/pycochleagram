@@ -53,6 +53,48 @@ def demo_human_cochleagram():
   utils.cochshow(np.flipud(coch_pow), interact=False)
   plt.gca().invert_yaxis()
   plt.tight_layout()
+
+  plt.figure()
+  cochd, sig_dict = cgram.demo_human_cochleagram(downsample=None, interact=False)
+  cochd_poly, sig_dict = cgram.demo_human_cochleagram(downsample='poly', interact=False)
+  cochd_resample, sig_dict = cgram.demo_human_cochleagram(downsample='resample', interact=False)
+  cochd_decimate, sig_dict = cgram.demo_human_cochleagram(downsample='decimate', interact=False)
+
+  plt.subplot(321)
+  plt.title('Signal waveform')
+  plt.plot(sig_dict['signal'])
+  plt.ylabel('amplitude')
+  plt.xlabel('time')
+
+  plt.subplot(323)
+  plt.title('Signal Frequency Content')
+  f, Pxx_den = welch(sig_dict['signal'].flatten(), sig_dict['sr'], nperseg=1024)
+  plt.semilogy(f, Pxx_den)
+  plt.xlabel('frequency [Hz]')
+  plt.ylabel('PSD [V**2/Hz]')
+
+  plt.subplot(322)
+  plt.title('Cochleagram with downsample: "poly"')
+  plt.ylabel('filter #')
+  plt.xlabel('time')
+  utils.cochshow(np.flipud(cochd_poly), interact=False)
+  plt.gca().invert_yaxis()
+
+  plt.subplot(324)
+  plt.title('Cochleagram with downsample: "resample"')
+  plt.ylabel('filter #')
+  plt.xlabel('time')
+  utils.cochshow(np.flipud(cochd_resample), interact=False)
+  plt.gca().invert_yaxis()
+
+  plt.subplot(326)
+  plt.title('Cochleagram with downsample: "decimate"')
+  plt.ylabel('filter #')
+  plt.xlabel('time')
+  utils.cochshow(np.flipud(cochd_decimate), interact=False)
+  plt.gca().invert_yaxis()
+  plt.tight_layout()
+
   plt.show()
 
 
