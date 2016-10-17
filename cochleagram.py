@@ -56,19 +56,20 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
       `apply_envelope_downsample` for more information. If `ret_mode` is
       'envs', this will be applied to the cochleagram before the nonlinearity.
       Providing a callable for custom downsampling is suggested.
-    nonlinearity (None, int, callable, optional): The `nonlinearity` argument
-      can be an predefined type, a callable (to apply a custom nonlinearity),
-      or None to return the unmodified cochleagram; see
-      `apply_envelope_nonlinearity` for more information. If `ret_mode` is
-      'envs', this will be applied to the cochleagram after downsampling.
-      Providing a callable for applying a custom nonlinearity is suggested.
+    nonlinearity ({None, 'db', 'power', callable}, optional): The `nonlinearity`
+      argument can be an predefined type, a callable
+      (to apply a custom nonlinearity), or None to return the unmodified
+      cochleagram; see `apply_envelope_nonlinearity` for more information.
+      If `ret_mode` is 'envs', this will be applied to the cochleagram after
+      downsampling. Providing a callable for applying a custom nonlinearity is
+      suggested.
     fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
       to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
       will fallback to numpy, if necessary.
     ret_mode ({'envs', 'subband', 'analytic', 'all'}): Determines what will be
       returned. 'envs' (default) returns the subband envelopes; 'subband'
       returns just the subbands, 'analytic' returns the analytic signal provided
-      by the Hilber transform, 'all' returns all local variables created in this
+      by the Hilbert transform, 'all' returns all local variables created in this
       function.
     strict (bool, optional): If True (default), will throw an errors if this
       function is used in a way that is unsupported by the MATLAB implemenation.
@@ -227,8 +228,8 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, env_sr=None, ta
   # cochleagram = apply_envelope_downsample(cochleagram, downsample, invert=True)
 
   # dT = 1 / ds_factor
-  # x = utils.matlab_arange(1, coch_length)
-  # xI = utils.matlab_arange(dT, coch_length, dT)
+  # x = np.linspace(1, coch_length, coch_length, endpoint=True)
+  # xI = np.linspace(dT, coch_length, dT * coch_length, endpoint=True)
   # upsampledEnv = interp1(x, xI, cochleagram)
 
   # generated signal starts from noise
@@ -261,7 +262,7 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, env_sr=None, ta
     synth_analytic_subbands = sb.generate_analytic_subbands(synth_sound, filters)
     synth_subband_mags = np.abs(synth_analytic_subbands)  # complex magnitude
     # synth_subband_phases = np.angle(synth_analytic_subbands)  # complex phases
-    synth_subband_phases = synth_analytic_subbands / synth_subband_mags  # don't know what this is, from alex's code, converges faster
+    synth_subband_phases = synth_analytic_subbands / synth_subband_mags  # should also be phases, converges faster
 
     synth_subbands = synth_subband_phases * cochleagram
     synth_subbands = np.real(synth_subbands)
@@ -271,7 +272,6 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, env_sr=None, ta
 
 def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
         pad_factor=None, env_sr=None, downsample=None, nonlinearity=None, n_iter=1000, strict=True, test=None):
-  print(locals())
   signal_length = cochleagram.shape[1]
   # generate filterbank
   filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(signal_length,
@@ -346,14 +346,18 @@ def apply_envelope_nonlinearity(subband_envelopes, nonlinearity, invert=False):
 
   Args:
     subband_envelopes (array): Cochleagram to apply the nonlinearity to.
-    nonlinearity (str, callable, None): Determines the nonlinearity operation
-      to apply to the cochleagram. If this is a valid string, one of the
-      predefined nonlinearities will be used. It can be: 'power' to perform
-      np.power(subband_envelopes, 3.0 / 10.0) or 'log' to perform
-      20 * np.log10(subband_envelopes / np.max(subband_envelopes)).
-      If `nonlinearity` is a python callable (e.g., function), it will be
-      applied to `subband_envelopes`. If this is None, no nonlinearity is
-      applied and the unmodified cochleagram is returned.
+    nonlinearity ({'db', 'power'}, callable, None): Determines the nonlinearity
+      operation to apply to the cochleagram. If this is a valid string, one
+      of the predefined nonlinearities will be used. It can be: 'power' to
+      perform np.power(subband_envelopes, 3.0 / 10.0) or 'db' to perform
+      20 * np.log10(subband_envelopes / np.max(subband_envelopes)), with values
+      clamped to be greater than -60. If `nonlinearity` is a python callable
+      (e.g., function), it will be applied to `subband_envelopes`. If this is
+      None, no nonlinearity is applied and the unmodified cochleagram is
+      returned.
+    invert (bool): For predefined nonlinearities 'db' and 'power', if False
+      (default), the nonlinearity will be applied. If True, the nonlinearity
+      will be inverted.
 
   Returns:
     array:
@@ -372,19 +376,14 @@ def apply_envelope_nonlinearity(subband_envelopes, nonlinearity, invert=False):
       subband_envelopes = np.power(subband_envelopes, 10.0 / 3.0)  # from Alex's code
     else:
       subband_envelopes = np.power(subband_envelopes, 3.0 / 10.0)  # from Alex's code
-  elif nonlinearity == "log":
+  elif nonlinearity == "db":
     if invert:
-      # subband_envelopes = np.log(subband_envelopes)  # adapted from Alex's code
       subband_envelopes = np.power(10, subband_envelopes / 20)  # adapted from Anastasiya's code
     else:
       dtype_eps = np.finfo(subband_envelopes.dtype).eps
-      # subband_envelopes[subband_envelopes <= 0] += dtype_eps
       subband_envelopes[subband_envelopes == 0] = dtype_eps
-      # subband_envelopes = np.log(subband_envelopes)  # adapted from Alex's code
-      subband_envelopes = 20 * np.log10(subband_envelopes / np.max(subband_envelopes))  # adapted from Anastasiya's code
-      # a = subband_envelopes / np.max(subband_envelopes)
-      # a[a <= 0] = dtype_eps
-      # subband_envelopes = 20 * np.log10(a)  # adapted from Anastasiya's code
+      subband_envelopes = 20 * np.log10(subband_envelopes / np.max(subband_envelopes))
+      subband_envelopes[subband_envelopes] < -60 = -60
   elif callable(nonlinearity):
     subband_envelopes = nonlinearity(subband_envelopes)
   else:
@@ -435,8 +434,8 @@ def demo_human_cochleagram(signal=None, sr=None, downsample=None, nonlinearity=N
 
   if nonlinearity is None:
     nonlinearity_fx = None
-  elif nonlinearity == 'log':
-    nonlinearity_fx = 'log'
+  elif nonlinearity == 'db':
+    nonlinearity_fx = 'db'
   elif nonlinearity == 'power':
     nonlinearity_fx = 'power'
   else:
@@ -482,28 +481,28 @@ def demo_invert_cochleagram(signal=None, sr=None):
   env_sr = 6000
 
   nonlinearity_fx = None
-  # nonlinearity_fx = 'log'
+  # nonlinearity_fx = 'db'
   # nonlinearity_fx = 'power'
 
   coch = human_cochleagram(signal, sr, downsample=downsample_fx, nonlinearity=nonlinearity_fx, strict=False)
-  # coch = np.flipud(coch)
-  downsample_fx = 'poly'
-  plt.subplot(311)
-  utils.cochshow(coch, interact=False)
-  print(coch.shape)
-  plt.subplot(312)
-  coch = apply_envelope_downsample(coch, downsample_fx, env_sr, sr, invert=False)
-  # # coch = coch ** (3/10)
-  # max_coch = coch.max()
-  # coch = 20 * np.log10(coch / coch.max())
-  utils.cochshow(coch, interact=False)
-  plt.subplot(313)
-  # inv_coch = apply_envelope_nonlinearity(coch, nonlinearity_fx, invert=True)
-  inv_coch = apply_envelope_downsample(coch, downsample_fx, env_sr, sr, invert=True)
-  # # inv_coch = coch ** (10/3)
-  # inv_coch = np.power(10, coch / 20)
-  print(inv_coch.shape)
-  utils.cochshow(inv_coch)
+  # # coch = np.flipud(coch)
+  # downsample_fx = 'poly'
+  # plt.subplot(311)
+  # utils.cochshow(coch, interact=False)
+  # print(coch.shape)
+  # plt.subplot(312)
+  # coch = apply_envelope_downsample(coch, downsample_fx, env_sr, sr, invert=False)
+  # # # coch = coch ** (3/10)
+  # # max_coch = coch.max()
+  # # coch = 20 * np.log10(coch / coch.max())
+  # utils.cochshow(coch, interact=False)
+  # plt.subplot(313)
+  # # inv_coch = apply_envelope_nonlinearity(coch, nonlinearity_fx, invert=True)
+  # inv_coch = apply_envelope_downsample(coch, downsample_fx, env_sr, sr, invert=True)
+  # # # inv_coch = coch ** (10/3)
+  # # inv_coch = np.power(10, coch / 20)
+  # print(inv_coch.shape)
+  # utils.cochshow(inv_coch)
 
   test = lambda: utils.play_array(signal, ignore_warning=True)
   invert_cochleagram(coch, sr, n, low_lim, hi_lim, sample_factor, pad_factor=None, nonlinearity=nonlinearity_fx, strict=False, test=test)
