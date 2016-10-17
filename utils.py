@@ -4,8 +4,11 @@ from __future__ import print_function
 
 from matplotlib.pyplot import imshow, show
 import numpy as np
+from scipy.io import wavfile
+import pyaudio
 
 
+##### Public Helper Methods #####
 def matlab_arange(start, stop, num):
   """Mimics MATLAB's sequence generation.
 
@@ -25,6 +28,7 @@ def matlab_arange(start, stop, num):
   return np.linspace(start, stop, num + 1)
 
 
+##### Display and Playback Methods #####
 def cochshow(cochleagram, interact=True, cmap='viridis'):
   """Helper function to facilitate displaying cochleagrams.
 
@@ -44,6 +48,118 @@ def cochshow(cochleagram, interact=True, cmap='viridis'):
   return f
 
 
+def get_channels(snd_array):
+  """Returns the number of channels in the sound array.
+  """
+  n_channels = 1
+  if snd_array.ndim > 1:
+    n_channels = snd_array.shape[1]
+  return n_channels
+
+
+def rescale_sound(snd_array, rescale):
+  """Rescale the sound with the provided rescaling method (if supported).
+
+  Args:
+    snd_array (array): The array containing the sound data.
+    rescale ({'standardize', 'normalize', None}): Determines type of
+      rescaling to perform. 'standardize' will divide by the max value
+      allowed by the numerical precision of the input. 'normalize' will
+      rescale to the interval [-1, 1]. None will not perform rescaling (NOTE:
+      be careful with this as this can be *very* loud if playedback!).
+
+  Returns:
+    array:
+    **rescaled_snd**: The sound array after rescaling.
+  """
+  rescale = _parse_rescale_arg(rescale)
+  if rescale == 'standardize':
+    if issubclass(snd_array.dtype.type, np.integer):
+      snd_array = snd_array / float(np.iinfo(snd_array.dtype).max)  # rescale so max value allowed by precision has value 1
+    elif issubclass(snd_array.dtype.type, np.floating):
+      snd_array = snd_array / float(np.finfo(snd_array.dtype).max)  # rescale so max value allowed by precision has value 1
+    else:
+      raise ValueError('rescale is undefined for input type: %s' % snd_array.dtype)
+  elif rescale == 'normalize':
+    snd_array = snd_array / float(snd_array.max())  # rescale to [-1, 1]
+  # do nothing if rescale is None
+  return snd_array
+
+
+def wav_to_array(fn, rescale='standardize'):
+  """ Reads wav file data into a numpy array.
+
+    Args:
+      fn (str): The file path to .wav file.
+      rescale ({'standardize', 'normalize', None}): Determines type of
+        rescaling to perform. 'standardize' will divide by the max value
+        allowed by the numerical precision of the input. 'normalize' will
+        rescale to the interval [-1, 1]. None will not perform rescaling (NOTE:
+        be careful with this as this can be *very* loud if playedback!).
+
+    Returns:
+      tuple:
+        **snd** (int): The sound in the .wav file as a numpy array.
+        **samp_freq** (array): Sampling frequency of the input sound.
+  """
+  samp_freq, snd = wavfile.read(fn)
+  snd = rescale_sound(snd, rescale)
+  return snd, samp_freq
+
+
+def play_array(snd_array, rescale='normalize', pyaudio_params={}, ignore_warning=False):
+  """Play the provided sound array using pyaudio.
+
+  Args:
+    snd_array (array): The array containing the sound data.
+    rescale ({'standardize', 'normalize', None}): Determines type of
+      rescaling to perform. 'standardize' will divide by the max value
+      allowed by the numerical precision of the input. 'normalize' will
+      rescale to the interval [-1, 1]. None will not perform rescaling (NOTE:
+      be careful with this as this can be *very* loud if playedback!).
+    pyaudio_params (dict): A dictionary containing any input arguments to pass
+      to the pyaudio.PyAudio.open method.
+
+  Returns:
+    str:
+      **sound_str**: The string representation (used by pyaudio) of the sound
+        array.
+  """
+  if ignore_warning is not True:
+    raise ValueError('WARNING: Playback is largely untested and can result in '+
+        'VERY LOUD sounds. Use this function at your own risk. Dismiss this error '+
+        'with `ignore_warning=True`.')
+
+  out_snd_array = rescale_sound(snd_array, rescale)
+
+  _pyaudio_params = {'format': pyaudio.paFloat32,
+                     'channels': 1,
+                     'rate': 44100,
+                     'frames_per_buffer': 1024,
+                     'output': True,
+                     'output_device_index': 1}
+
+  for k, v in pyaudio_params.items():
+    _pyaudio_params[k] = v
+
+  print('pyAudio Params:\n', _pyaudio_params)
+  p = pyaudio.PyAudio()
+  # stream = p.open(format=pyaudio.paFloat32,
+  #                 channels=1,
+  #                 rate=44100,
+  #                 frames_per_buffer=1024,
+  #                 output=True,
+  #                 output_device_index=1)
+  stream = p.open(**_pyaudio_params)
+  data = out_snd_array.astype(np.float32).tostring()
+
+  # stream = p.open(format=pyaudio.paInt16, channels=1, rate=samp_freq, output=True, frames_per_buffer=CHUNKSIZE)
+  # data = snd.astype(snd.dtype).tostring()
+  stream.write(data)
+  return data
+
+
+##### FFT-like Methods #####
 def fft(a, n=None, axis=-1, norm=None, mode='auto', params=None):
   """Provides support for various implementations of the FFT, using numpy's
   fftpack or pyfftw's fftw. This uses a numpy.fft-like interface.
@@ -74,10 +190,10 @@ def fft(a, n=None, axis=-1, norm=None, mode='auto', params=None):
       a description of the output.
   """
   # handle 'auto' mode
-  mode, params = _parse_mode(mode, params)
+  mode, params = _parse_fft_mode(mode, params)
   # named args override params
   d1 = {'n': n, 'axis': axis, 'norm': norm}
-  params = dict(d1,**params)
+  params = dict(d1, **params)
 
   if mode == 'fftw':
     import pyfftw
@@ -119,10 +235,10 @@ def ifft(a, n=None, axis=-1, norm=None, mode='auto', params=None):
       description of the output.
   """
   # handle 'auto' mode
-  mode, params = _parse_mode(mode, params)
+  mode, params = _parse_fft_mode(mode, params)
   # named args override params
   d1 = {'n': n, 'axis': axis, 'norm': norm}
-  params = dict(d1,**params)
+  params = dict(d1, **params)
 
   if mode == 'fftw':
     import pyfftw
@@ -163,10 +279,10 @@ def rfft(a, n=None, axis=-1, mode='auto', params=None):
       See numpy.rfft() for a description of the output.
   """
   # handle 'auto' mode
-  mode, params = _parse_mode(mode, params)
+  mode, params = _parse_fft_mode(mode, params)
   # named args override params
   d1 = {'n': n, 'axis': axis, 'norm': norm}
-  params = dict(d1,**params)
+  params = dict(d1, **params)
 
   if mode == 'fftw':
     import pyfftw
@@ -207,10 +323,10 @@ def irfft(a, n=None, axis=-1, mode='auto', params=None):
       description of the output.
   """
   # handle 'auto' mode
-  mode, params = _parse_mode(mode, params)
+  mode, params = _parse_fft_mode(mode, params)
   # named args override params
   d1 = {'n': n, 'axis': axis, 'norm': norm}
-  params = dict(d1,**params)
+  params = dict(d1, **params)
 
   if mode == 'fftw':
     import pyfftw
@@ -265,7 +381,8 @@ def fhilbert(a, axis=None, mode='auto', ifft_params=None):
   return ifft(ah, mode=mode, params=ifft_params)
 
 
-def _parse_mode(mode, params):
+##### Internal (Private) Helper Methods #####
+def _parse_fft_mode(mode, params):
   """Prepare mode and params arguments provided by user for use with
   utils.fft, utils.ifft, etc.
 
@@ -301,3 +418,30 @@ def _parse_mode(mode, params):
     if params is None:
       params = {}
   return mode, params
+
+
+def _parse_rescale_arg(rescale):
+  """Parse the rescaling argument to a standard form.
+
+  Args:
+    rescale ({'normalize', 'standardize', None}): Determines how rescaling
+      will be performed.
+
+  Returns:
+    (str or None): A valid rescaling argument, for use with wav_to_array or
+      similar.
+
+  Raises:
+    ValueError: Throws an error if rescale value is unrecognized.
+  """
+  if rescale is not None:
+    rescale = rescale.lower()
+  if rescale == 'normalize':
+    out_rescale = 'normalize'
+  elif rescale == 'standardize':
+    out_rescale = 'standardize'
+  elif rescale is None:
+    out_rescale = None
+  else:
+    raise ValueError('Unrecognized rescale value: %s' % rescale)
+  return out_rescale
