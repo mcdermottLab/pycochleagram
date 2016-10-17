@@ -176,8 +176,8 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
     raise ValueError('sample_factor must be positive')
 
   if sample_factor != 1 and np.remainder(sample_factor, 2) != 0:
+    msg = 'sample_factor odd, and will change ERB filter widths. Use even sample factors for comparison.'
     if strict:
-      msg = 'sample_factor odd, and will change ERB filter widths. Use even sample factors for comparison.'
       raise ValueError(msg)
     else:
       warnings.warn(msg, RuntimeWarning, stacklevel=2)
