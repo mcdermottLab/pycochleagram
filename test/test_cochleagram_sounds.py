@@ -226,7 +226,8 @@ def test_run_dir(in_path, verbose=0):
 
 def main():
   # DIR  ='/Users/Andrew/Projects/McDermott/py-cochleagram/py-cochleagram/test/data/cochleagram_outputs/'
-  DIR  ='/Users/raygon/Desktop/mdlab/projects/cochleagram/test/data/output/coch_human/'
+  #DIR  ='/Users/raygon/Desktop/mdlab/projects/cochleagram/test/data/output/coch_human/'
+  DIR = '/home/vagrant/Lab_Projects/py-cochleagram/test/data/output/coch_human'
   # test_erb_filters()
   test_run_dir(DIR, verbose=2)
 

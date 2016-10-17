@@ -46,10 +46,7 @@ for k = 1:100%length(sounds)
 %     full_filts_4 = make_full_filter_set(filts_4, signal_length);
 
     % gener
-    tic
     [subbands_1, fft_filts_1, fft_sample_1, fft_subbands_1] = generate_subbands_debug(wavData, filts_1); % filters signal (ct) with generated audiobank filter
-    toc
-    continue
     [subbands_2, fft_filts_2, fft_sample_2, fft_subbands_2] = generate_subbands_debug(wavData, filts_2);
     [subbands_4, fft_filts_4, fft_sample_4, fft_subbands_4] = generate_subbands_debug(wavData, filts_4);
     

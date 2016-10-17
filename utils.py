@@ -76,7 +76,8 @@ def fft(a, n=None, axis=-1, norm=None, mode='auto', params=None):
   # handle 'auto' mode
   mode, params = _parse_mode(mode, params)
   # named args override params
-  params = {**params, 'n': n, 'axis': axis, 'norm': norm}
+  d1 = {'n': n, 'axis': axis, 'norm': norm}
+  params = dict(d1,**params)
 
   if mode == 'fftw':
     import pyfftw
@@ -120,7 +121,8 @@ def ifft(a, n=None, axis=-1, norm=None, mode='auto', params=None):
   # handle 'auto' mode
   mode, params = _parse_mode(mode, params)
   # named args override params
-  params = {**params, 'n': n, 'axis': axis, 'norm': norm}
+  d1 = {'n': n, 'axis': axis, 'norm': norm}
+  params = dict(d1,**params)
 
   if mode == 'fftw':
     import pyfftw
@@ -163,7 +165,8 @@ def rfft(a, n=None, axis=-1, mode='auto', params=None):
   # handle 'auto' mode
   mode, params = _parse_mode(mode, params)
   # named args override params
-  params = {**params, 'n': n, 'axis': axis}
+  d1 = {'n': n, 'axis': axis, 'norm': norm}
+  params = dict(d1,**params)
 
   if mode == 'fftw':
     import pyfftw
@@ -206,7 +209,8 @@ def irfft(a, n=None, axis=-1, mode='auto', params=None):
   # handle 'auto' mode
   mode, params = _parse_mode(mode, params)
   # named args override params
-  params = {**params, 'n': n, 'axis': axis}
+  d1 = {'n': n, 'axis': axis, 'norm': norm}
+  params = dict(d1,**params)
 
   if mode == 'fftw':
     import pyfftw
