@@ -192,9 +192,8 @@ def demo_invert_cochleagram(signal=None, sr=None, n=None, playback=False):
   print('Generated cochleagram with shape: ', coch.shape)
 
   # invert the cochleagram to get a signal
-  test = lambda: print('test')
   coch = np.flipud(coch)  # the ouput of demo_human_cochleagram_helper is flipped
-  inv_coch_sig = cgram.invert_cochleagram(coch, sr, n, low_lim, hi_lim, sample_factor, n_iter=10, strict=False, test=test)
+  inv_coch_sig = cgram.invert_cochleagram(coch, sr, n, low_lim, hi_lim, sample_factor, n_iter=10, strict=False)
   inv_coch = demo_human_cochleagram_helper(inv_coch_sig, sr, n, sample_factor=sample_factor)
 
   print('Generated inverted cochleagram')
@@ -237,6 +236,15 @@ def demo_playback(signal, sr, ignore_warning=False):
   Returns:
     None
   """
+  # get a signal if one isn't provided
+  if signal is None:
+    signal, signal_params = make_harmonic_stack()
+    sr = signal_params['sr']
+    n = signal_params['n']
+  else:
+    assert sr is not None
+    assert n is not None
+
   # audio playback
   pyaudio_params={'channels': utils.get_channels(signal),
                   'rate': sr,
@@ -246,13 +254,15 @@ def demo_playback(signal, sr, ignore_warning=False):
   utils.play_array(signal, pyaudio_params=pyaudio_params, ignore_warning=ignore_warning)
 
 
-def make_harmonic_stack(f0=100, n_harm=40, dur=0.25, sr=20000, low_lim=50, hi_lim=20000, n=None):
+def make_harmonic_stack(f0=100, n_harm=40, dur=0.25001, sr=20000, low_lim=50, hi_lim=20000, n=None):
   """Synthesize a tone created with a stack of harmonics.
 
   Args:
     f0 (int, optional): Fundamental frequency.
     n_harm (int, optional): Number of harmonics to include.
-    dur (float, optional): Duration, in milliseconds.
+    dur (float, optional): Duration, in milliseconds. Note, the default value
+      was chosen to create a signal length that is compatible with the
+      predefined downsampling method.
     sr (int, optional): Sampling rate.
     low_lim (int, optional): Lower limit for filterbank.
     hi_lim (int, optional): Upper limit for filerbank.
@@ -305,7 +315,7 @@ def main(ignore_playback_warning=False, mode='rand_sound'):
   """
   mode = mode.lower()
   DEMO_PATH = 'demo_stim'
-  if mode == 'rand_sound':
+  if mode == 'rand_sound' and False:
     rfn = choice([os.path.join(DEMO_PATH, f)for f in os.listdir(DEMO_PATH)])
     print('Running demo with sound file: %s ' % rfn)
     demo_stim, demo_sr = utils.wav_to_array(rfn)

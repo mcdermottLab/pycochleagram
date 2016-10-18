@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import warnings
 from time import sleep
 import numpy as np
 import scipy.signal
@@ -10,10 +9,6 @@ import scipy.signal
 import erbfilter as erb
 import subband as sb
 import utils
-
-import matplotlib.pyplot as plt
-
-import pdb
 
 
 def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
@@ -25,10 +20,7 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
   This first creates a an ERB filterbank with the provided input arguments for
   the provided signal. This filterbank is then used to perform the subband
   decomposition to create the subband envelopes. The resulting envelopes can be
-  optionally downsampled and then modified with a
-  nonlinearity.
-
-  To
+  optionally downsampled and then modified with a nonlinearity.
 
   Args:
     signal (array): The sound signal (waveform) in the time domain. Should be
@@ -53,18 +45,20 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
       before filtering. Otherwise, the filters will be created assuming the
       waveform signal will be padded to length pad_factor*signal_length.
     downsample (None, int, callable, optional): The `downsample` argument can
-      be an downsampling factor, a callable (to perform custom downsampling),
-      or None to return the unmodified cochleagram; see
-      `apply_envelope_downsample` for more information. If `ret_mode` is
-      'envs', this will be applied to the cochleagram before the nonlinearity.
-      Providing a callable for custom downsampling is suggested.
+      be an integer representing the upsampling factor in polyphase resampling
+      (with `sr` as the downsampling factor), a callable
+      (to perform custom downsampling), or None to return the
+      unmodified cochleagram; see `apply_envelope_downsample` for more
+      information. If `ret_mode` is 'envs', this will be applied to the
+      cochleagram before the nonlinearity, otherwise no downsampling will be
+      performed. Providing a callable for custom downsampling is suggested.
     nonlinearity ({None, 'db', 'power', callable}, optional): The `nonlinearity`
       argument can be an predefined type, a callable
       (to apply a custom nonlinearity), or None to return the unmodified
       cochleagram; see `apply_envelope_nonlinearity` for more information.
       If `ret_mode` is 'envs', this will be applied to the cochleagram after
-      downsampling. Providing a callable for applying a custom nonlinearity is
-      suggested.
+      downsampling, otherwise no nonlinearity will be applied. Providing a
+      callable for applying a custom nonlinearity is suggested.
     fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
       to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
       will fallback to numpy, if necessary.
@@ -142,8 +136,9 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
 def human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
         sample_factor=2, pad_factor=None, downsample=None, nonlinearity=None,
         fft_mode='auto', ret_mode='envs', strict=True):
-  """Generate the subband envelopes (i.e., the cochleagram)
-  of the provided signal using sensible default parameters for a human cochleagram.
+  """Convenience function to generate the subband envelopes
+  (i.e., the cochleagram) of the provided signal using sensible default
+  parameters for a human cochleagram.
 
   This first creates a an ERB filterbank with the provided input arguments for
   the provided signal. This filterbank is then used to perform the subband
@@ -173,18 +168,20 @@ def human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
       before filtering. Otherwise, the filters will be created assuming the
       waveform signal will be padded to length pad_factor*signal_length.
     downsample (None, int, callable, optional): The `downsample` argument can
-      be the target sampling rate for polyphase resampling,
-      a callable (to perform custom downsampling), or None to return the
+      be an integer representing the upsampling factor in polyphase resampling
+      (with `sr` as the downsampling factor), a callable
+      (to perform custom downsampling), or None to return the
       unmodified cochleagram; see `apply_envelope_downsample` for more
       information. If `ret_mode` is 'envs', this will be applied to the
-      cochleagram before the nonlinearity. Providing a callable for custom
-      downsampling is suggested.
-    nonlinearity (None, int, callable, optional): The `nonlinearity` argument
-      can be an predefined type, a callable (to apply a custom nonlinearity),
-      or None to return the unmodified cochleagram; see
-      `apply_envelope_nonlinearity` for more information. If `ret_mode` is
-      'envs', this will be applied to the cochleagram after downsampling.
-      Providing a callable for applying a custom nonlinearity is suggested.
+      cochleagram before the nonlinearity, otherwise no downsampling will be
+      performed. Providing a callable for custom downsampling is suggested.
+    nonlinearity ({None, 'db', 'power', callable}, optional): The `nonlinearity`
+      argument can be an predefined type, a callable
+      (to apply a custom nonlinearity), or None to return the unmodified
+      cochleagram; see `apply_envelope_nonlinearity` for more information.
+      If `ret_mode` is 'envs', this will be applied to the cochleagram after
+      downsampling, otherwise no nonlinearity will be applied. Providing a
+      callable for applying a custom nonlinearity is suggested.
     fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
       to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
       will fallback to numpy, if necessary.
@@ -213,56 +210,62 @@ def human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
   return out
 
 
-def batch_human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
-        sample_factor=2, pad_factor=None, downsample=None, nonlinearity=None,
-        fft_mode='auto', ret_mode='envs', strict=True):
-  raise NotImplementedError()
+def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=100,
+        downsample=None, nonlinearity=None, n_iter=20):
+  """Generate a waveform from a cochleagram using a provided filterbank.
 
+  Args:
+    cochleagram (array): The subband envelopes (i.e., cochleagram) to invert.
+    filters (array): The filterbank, in frequency space, used to generate the
+      cochleagram. This should be the full filter-set output of
+      erbFilter.make_erb_cos_filters_nx, or similar.
+    sr (int): Sampling rate associated with the cochleagram.
+    target_rms (scalar): Target root-mean-squared value of the output, related
+      to SNR, TODO: this needs to be checked
+    downsample (None, int, callable, optional): If downsampling was performed on
+      `cochleagram`, this is the operation to invert that downsampling
+      (i.e., upsample); this determines the length of the output signal.
+      The `downsample` argument can be an integer representing the downsampling
+      factor in polyphase resampling (with `sr` as the upsampling factor),
+      a callable (to perform custom downsampling), or None to return the
+      unmodified cochleagram; see `apply_envelope_downsample` for more
+      information. Providing a callable for custom function for upsampling
+      is suggested.
+    nonlinearity ({None, 'db', 'power', callable}, optional): If a nonlinearity
+      was applied to `cochleagram`, this is the operation to invert that
+      nonlinearity.  The `nonlinearity` argument can be an predefined type,
+      a callable (to apply a custom nonlinearity), or None to return the
+      unmodified cochleagram; see `apply_envelope_nonlinearity` for more
+      information. If this is a predefined type, the nonlinearity will be
+      inverted according to `apply_envelope_nonlinearity`.
+    fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
+      to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
+      will fallback to numpy, if necessary.
+    n_iter (int, optional): Number of iterations to perform for the inversion.
 
-def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=300, downsample=None, nonlinearity=None, n_iter=20, test=None):
+  Returns:
+    array:
+    **inv_signal**: The waveform signal created by inverting the cochleagram.
+  """
   # decompress envelopes
   cochleagram = apply_envelope_nonlinearity(cochleagram, nonlinearity, invert=True)
 
-  # # upsample
-  # if env_sr is None:
-  #   env_sr = sr
-  # ds_factor = sr / env_sr
-  # synth_size = ds_factor * coch_length
+  # upsample
   if downsample is None or callable(downsample):
     cochleagram = apply_envelope_downsample(cochleagram, downsample, invert=True) # downsample is None or callable
   else:
     # interpret downsample as new sampling rate
     cochleagram = apply_envelope_downsample(cochleagram, 'poly', sr, downsample, invert=True)
 
-  # dT = 1 / ds_factor
-  # x = np.linspace(1, coch_length, coch_length, endpoint=True)
-  # xI = np.linspace(dT, coch_length, dT * coch_length, endpoint=True)
-  # upsampledEnv = interp1(x, xI, cochleagram)
   coch_length = cochleagram.shape[1]
 
   # generated signal starts from noise
   synth_size = coch_length
-  print('inv coch sig size: ', synth_size)
   synth_sound = np.random.random(synth_size)  # uniform noise
   # synth_sound = np.random.randn(synth_size)  # gaussian noise
 
-  print("\t\tSynth signal shape: %s" % synth_sound.shape)
-
   # iteratively enforce envelopes on cochleagram of iter_noise
   for i in range(n_iter):
-    if i % 10 == 0:
-      if i > 0:
-        plt.subplot(211)
-        plt.title('Original Cochleagram')
-        utils.cochshow(cochleagram, interact=False)
-        plt.subplot(212)
-        plt.title('Synth Cochleagram iter: %s' % i)
-        utils.cochshow(np.abs(synth_analytic_subbands))
-        test()
-        sleep(1)
-        utils.play_array(synth_sound, ignore_warning=True)
-        sleep(1)
-
     print('inverting iteration: %s' % (i + 1))
     synth_sound = target_rms / utils.rms(synth_sound) * synth_sound
 
@@ -280,7 +283,60 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=300,
 
 
 def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
-        pad_factor=None, env_sr=None, downsample=None, nonlinearity=None, n_iter=50, strict=True, test=None):
+        pad_factor=None, target_rms=100, downsample=None, nonlinearity=None, n_iter=50, strict=True):
+  """Generate a waveform from a cochleagram using the provided arguments to
+  construct a filterbank.
+
+  Args:
+    cochleagram (array): The subband envelopes (i.e., cochleagram) to invert.
+    sr (int): Sampling rate associated with the cochleagram.
+    n (int): Number of filters (subbands) to be generated with standard
+      sampling (i.e., using a sampling factor of 1). Note, the actual number of
+      filters in the generated filterbank depends on the sampling factor, and
+      will also include lowpass and highpass filters that allow for
+      perfect reconstruction of the input signal (the exact number of lowpass
+      and highpass filters is determined by the sampling factor).
+    low_lim (int): Lower limit of frequency range. Filters will not be defined
+      below this limit.
+    hi_lim (int): Upper limit of frequency range. Filters will not be defined
+      above this limit.
+    sample_factor (int): Positive integer that determines how densely ERB function
+     will be sampled to create bandpass filters. 1 represents standard sampling;
+     adjacent bandpass filters will overlap by 50%. 2 represents 2x overcomplete sampling;
+     adjacent bandpass filters will overlap by 75%. 4 represents 4x overcomplete sampling;
+     adjacent bandpass filters will overlap by 87.5%.
+    pad_factor (int, optional): If None (default), the signal will not be padded
+      before filtering. Otherwise, the filters will be created assuming the
+      waveform signal will be padded to length pad_factor*signal_length.
+    target_rms (scalar): Target root-mean-squared value of the output, related
+      to SNR, TODO: this needs to be checked
+    downsample (None, int, callable, optional): If downsampling was performed on
+      `cochleagram`, this is the operation to invert that downsampling
+      (i.e., upsample); this determines the length of the output signal.
+      The `downsample` argument can be an integer representing the downsampling
+      factor in polyphase resampling (with `sr` as the upsampling factor),
+      a callable (to perform custom downsampling), or None to return the
+      unmodified cochleagram; see `apply_envelope_downsample` for more
+      information. Providing a callable for custom function for upsampling
+      is suggested.
+    nonlinearity ({None, 'db', 'power', callable}, optional): If a nonlinearity
+      was applied to `cochleagram`, this is the operation to invert that
+      nonlinearity.  The `nonlinearity` argument can be an predefined type,
+      a callable (to apply a custom nonlinearity), or None to return the
+      unmodified cochleagram; see `apply_envelope_nonlinearity` for more
+      information. If this is a predefined type, the nonlinearity will be
+      inverted according to `apply_envelope_nonlinearity`.
+    fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
+      to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
+      will fallback to numpy, if necessary.
+    n_iter (int, optional): Number of iterations to perform for the inversion.
+    strict (bool, optional): If True (default), will throw an errors if this
+      function is used in a way that is unsupported by the MATLAB implemenation.
+
+  Returns:
+    array:
+    **inv_signal**: The waveform signal created by inverting the cochleagram.
+  """
   # decompress envelopes
   cochleagram_ref = apply_envelope_nonlinearity(cochleagram, nonlinearity, invert=True)
 
@@ -299,7 +355,7 @@ def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
       full_filter=True, strict=strict)
 
   # invert filterbank
-  out_sig = invert_cochleagram_with_filterbank(cochleagram_ref, filts, sr, n_iter=n_iter, test=test)
+  out_sig = invert_cochleagram_with_filterbank(cochleagram_ref, filts, sr, target_rms=target_rms, n_iter=n_iter)
 
   return out_sig
 
@@ -365,6 +421,11 @@ def apply_envelope_downsample(subband_envelopes, mode, audio_sr=None, env_sr=Non
       else:
         subband_envelopes = scipy.signal.resample(subband_envelopes, np.ceil(subband_envelopes.shape[1]*(env_sr/audio_sr)), axis=1)  # fourier method: this causes NANs that get converted to 0s
     elif mode == 'poly':
+      if strict:
+        n_samples = subband_envelopes.shape[1] * (env_sr / audio_sr)
+        if not np.isclose(n_samples, int(n_samples)):
+          raise ValueError('Choose `env_sr` and `audio_sr` such that the number of samples after polyphase resampling is an integer'+
+                           '\n(length: %s, env_sr: %s, audio_sr: %s' % (subband_envelopes.shape[1], env_sr, audio_sr))
       if invert:
         subband_envelopes = scipy.signal.resample_poly(subband_envelopes, audio_sr, env_sr, axis=1)  # this requires v0.18 of scipy
       else:
