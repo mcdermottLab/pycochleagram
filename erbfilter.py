@@ -5,10 +5,6 @@ from __future__ import print_function
 import warnings
 import numpy as np
 
-import matplotlib.pyplot as plt
-
-import pdb
-
 import utils
 
 
@@ -489,36 +485,3 @@ def make_erb_cos_filters(signal_length, sr, n, low_lim, hi_lim, full_filter=Fals
     filts = make_full_filter_set(filts, signal_length)
 
   return filts, cutoffs, freqs
-
-
-def runTests():
-  import matplotlib.pyplot as plt
-  # generates filters with cosine frequency response functions on an erb-transformed frequency axis
-  SIG_LEN = 1000
-  SR = 44100
-  LOW_LIM = 50
-  HI_LIM = 20000
-  N_HUMAN = np.floor(freq2erb(HI_LIM) - freq2erb(LOW_LIM)) - 1
-  N_HUMAN = N_HUMAN.astype(int)
-  N_HUMAN = 5
-  print('N: ', N_HUMAN)
-
-  t = utils.matlab_arange(0, 1, SR)
-  ct = np.sin(2*np.pi*10*t)
-
-  print(t.shape)
-
-  plt.figure()
-  filts0, hz_cutoffs0, freqs0 = make_erb_cos_filters(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM)
-  filts, hz_cutoffs, freqs = make_erb_cos_filters_nx(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM, 1)
-  # filts, hz_cutoffs, freqs = make_erb_cos_filters_nx(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM, 2)
-  # filts, hz_cutoffs, freqs = make_erb_cos_filters_nx(len(ct), SR, N_HUMAN, LOW_LIM, HI_LIM, 4)
-  print(filts0.shape)
-  # plt.subplot(211)
-  # for i in range(filts0.shape[0]):
-  #   plt.plot(filts0[i, ...])
-  plt.plot(filts0.T)
-  plt.show()
-
-if __name__ == '__main__':
-  runTests()

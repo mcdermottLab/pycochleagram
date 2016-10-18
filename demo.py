@@ -240,10 +240,8 @@ def demo_playback(signal, sr, ignore_warning=False):
   if signal is None:
     signal, signal_params = make_harmonic_stack()
     sr = signal_params['sr']
-    n = signal_params['n']
   else:
     assert sr is not None
-    assert n is not None
 
   # audio playback
   pyaudio_params={'channels': utils.get_channels(signal),
@@ -315,7 +313,7 @@ def main(ignore_playback_warning=False, mode='rand_sound'):
   """
   mode = mode.lower()
   DEMO_PATH = 'demo_stim'
-  if mode == 'rand_sound' and False:
+  if mode == 'rand_sound':
     rfn = choice([os.path.join(DEMO_PATH, f)for f in os.listdir(DEMO_PATH)])
     print('Running demo with sound file: %s ' % rfn)
     demo_stim, demo_sr = utils.wav_to_array(rfn)
