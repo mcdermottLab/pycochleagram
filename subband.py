@@ -4,8 +4,6 @@ from __future__ import print_function
 
 import warnings
 import numpy as np
-import scipy.signal
-import matplotlib.pyplot as plt
 
 import erbfilter as erb
 import utils
@@ -104,110 +102,6 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None, fft_mode='
   subband_envelopes = np.abs(analytic_subbands)
 
   if pad_factor is not None and pad_factor > 1:
-    analytic_subbands = analytic_subbands[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
-    subband_envelopes = subband_envelopes[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
-
-  if debug_ret_all is True:
-    out_dict = {}
-    # add all local variables to out_dict
-    for k in dir():
-      if k != 'out_dict':
-        out_dict[k] = locals()[k]
-    return out_dict
-  else:
-    return subband_envelopes
-
-
-def generate_subband_envelopes_alex_fast(signal, filters, pad_factor=None, debug_ret_all=False):
-  """Generate the subband envelopes (i.e., the cochleagram) of the signal by
-  applying the provided filters.
-
-  This method returns *only* the envelopes of the subband decomposition.
-  The signal can be optionally zero-padded before the decomposition. The
-  resulting envelopes can be optionally downsampled and then modified with a
-  nonlinearity.
-
-  This function expedites the calculation of the subbands envelopes by:
-    1) using the rfft rather than standard fft to compute the dft.
-    2) hand-computing the Hilbert transform, to avoid repeated and unnecessary
-       calls to fft/ifft.
-
-  The Fourier-based analytic signal algorithm can be found here:
-  Marple.  Computing the Discrete-Time Analytic Signal via FFT.  IEEE Trans Sig Proc 1999.
-  http://classes.engr.oregonstate.edu/eecs/winter2009/ece464/AnalyticSignal_Sept1999_SPTrans.pdf
-
-  Credit to Alex Kell for this method.
-
-  Args:
-    signal (array): The sound signal (waveform) in the time domain. Should be
-      flattened, i.e., the shape is (n_samples,).
-    filters (array): The filterbank, in frequency space, used to generate the
-      cochleagram. This should be the full filter-set output of
-      erbFilter.make_erb_cos_filters_nx, or similar.
-    pad_factor (int, optional): Factor that determines if the signal will be
-      zero-padded before generating the subbands. If this is None,
-      or less than 1, no zero-padding will be used. Otherwise, zeros are added
-      to the end of the input signal until is it of length
-      `pad_factor * length(signal)`. This padded region will be removed after
-      performing the subband decomposition.
-    fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
-      to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
-      will fallback to numpy, if necessary.
-
-  Returns:
-    array:
-    **subband_envelopes**: The subband envelopes (i.e., cochleagram) resulting from
-      the subband decomposition. This should have the same shape as `filters`.
-  """
-  warnings.warn('Function is deprecated; use generate_subband_envelopes_fast instead', DeprecationWarning)
-
-  # convert the signal to a canonical representation
-  signal_flat = reshape_signal_canonical(signal)
-
-  if pad_factor is not None and pad_factor >= 1:
-    signal_flat, padding = pad_signal(signal_flat, pad_factor)
-
-  n = signal_flat.shape[0]
-  assert np.mod(n, 2) == 0  # likely overly stringent but just for safety here
-
-  nr = int(np.floor(n / 2)) + 1
-  n_filts = filters.shape[0]
-
-  # note: the real fft, signal needs to be flat or have axis specified
-  Fr = np.fft.rfft(signal_flat)  # len: nr = n/2+1 (e.g., 8001 for 1 sec and 16K sr)
-
-  # pdb.set_trace()
-
-  # compute the subbands
-  # note that "real" here doesn't indicate that the variable consists of real
-  # values; it doesn't -- the values are complex
-  # instead, "real" indicates that it's half of the full DFT, just the positive
-  # frequencies because the negatives are redundant for real-valued sigs
-  subbands_fourier_real = filters[:, :nr] * Fr
-
-  # manually compute the hilbert transform here
-  # h is a vector which:
-  # -- doubles the amplitude of the real positive frequencies
-  # -- leaves the DC and the postive and negative nyquist unchanged
-  # -- zeros out the negative frequencies (which are already zeroed here
-  h = np.zeros(nr)
-  h[0], h[1:n/2], h[n/2] = 1.0, 2.0, 1.0  # remember for middle, noninclusive upper bound
-
-  analytic_subbands_fourier_real = subbands_fourier_real * h
-
-  ## fill this in so can make a simple ifft call
-  ## can't make an irfft call because we DON'T want to assume that
-  ## the negative frequencies are conjugate
-  ## the time-domain analytic signal is complex
-  ## (the negative frequencies here are in fact they are zero)
-  analytic_subbands_fourier = np.zeros((n_filts, n), dtype=complex)
-  analytic_subbands_fourier[:, :nr] = analytic_subbands_fourier_real
-
-  ## below is in the time domain
-  analytic_subbands = np.fft.ifft(analytic_subbands_fourier, axis=1)
-  subband_envelopes = np.abs(analytic_subbands)
-
-  if pad_factor is not None and pad_factor >= 1:
     analytic_subbands = analytic_subbands[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
     subband_envelopes = subband_envelopes[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
 
@@ -377,44 +271,57 @@ def generate_subband_envelopes(signal, filters, pad_factor=None, debug_ret_all=F
     return subband_envelopes
 
 
-def collapse_subbands(subbands, filters, fft_mode='auto', is_envs=False, which_nl=None):
-    """
-    take your subbands and collapse them into a waveform
-    """
-    # if which_nl is None:
-    #   which_nl = self.which_nl
+def collapse_subbands(subbands, filters, fft_mode='auto'):
+  """Collapse the subbands into a waveform by (re)applying the filterbank.
 
-    # fft_filts = self._fft_filts
+  Args:
+    subbands (array): The subband decomposition (i.e., cochleagram) to collapse.
+    filters (array): The filterbank, in frequency space, used to generate the
+      cochleagram. This should be the full filter-set output of
+      erbFilter.make_erb_cos_filters_nx, or similar, that was used to create
+      `subbands`.
+    fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
+      to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
+      will fallback to numpy, if necessary.
 
-    # if is_envs:
-    #   # gensbs --> compress --> downsample
-    #   # so here: --> upsample --> uncompress
+  Returns:
+    array:
+    **signal**: The signal resulting from collapsing the subbands.
+  """
+  # if which_nl is None:
+  #   which_nl = self.which_nl
 
-    #   # upsample
-    #   subbands = signal.resample(subbands, self.database_sr, axis=1)
-    #   subbands[subbands<0] = 0
+  # fft_filts = self._fft_filts
 
-    #   # uncompress
-    #   if which_nl=="power":
-    #     subbands = subbands**(10.0/3.0)
-    #   elif which_nl=="log":
-    #     subbands = np.e**subbands - self._eps_avoid_inf_log
+  # if is_envs:
+  #   # gensbs --> compress --> downsample
+  #   # so here: --> upsample --> uncompress
 
-    # # zeropad
-    # if self.do_zeropad_before_fft:
-    #   subbands = np.concatenate((subbands, np.zeros(subbands.shape)), axis=1)
+  #   # upsample
+  #   subbands = signal.resample(subbands, self.database_sr, axis=1)
+  #   subbands[subbands<0] = 0
 
-    # print('sb pre shape ', subbands.shape)
-    fft_subbands = filters * utils.fft(subbands, mode=fft_mode)
-    # subbands = utils.ifft(fft_subbands)
-    subbands = np.real(utils.ifft(fft_subbands, mode=fft_mode))
-    # print('sb post signal shape: ', subbands.shape)
-    signal = subbands.sum(axis=0)
-    # print('collapse subbands signal shape: ', signal.shape)
+  #   # uncompress
+  #   if which_nl=="power":
+  #     subbands = subbands**(10.0/3.0)
+  #   elif which_nl=="log":
+  #     subbands = np.e**subbands - self._eps_avoid_inf_log
 
-    # if self.do_zeropad_before_fft:
-    #     wav = wav[:wav.size/2]
-    return signal
+  # # zeropad
+  # if self.do_zeropad_before_fft:
+  #   subbands = np.concatenate((subbands, np.zeros(subbands.shape)), axis=1)
+
+  # print('sb pre shape ', subbands.shape)
+  fft_subbands = filters * utils.fft(subbands, mode=fft_mode)
+  # subbands = utils.ifft(fft_subbands)
+  subbands = np.real(utils.ifft(fft_subbands, mode=fft_mode))
+  # print('sb post signal shape: ', subbands.shape)
+  signal = subbands.sum(axis=0)
+  # print('collapse subbands signal shape: ', signal.shape)
+
+  # if self.do_zeropad_before_fft:
+  #     wav = wav[:wav.size/2]
+  return signal
 
 
 def pad_signal(signal, pad_factor, axis=0):
