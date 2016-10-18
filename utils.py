@@ -5,7 +5,6 @@ from __future__ import print_function
 from matplotlib.pyplot import imshow, show
 import numpy as np
 from scipy.io import wavfile
-import pyaudio
 
 
 ##### Public Helper Methods #####
@@ -154,6 +153,7 @@ def play_array(snd_array, rescale='normalize', pyaudio_params={}, ignore_warning
     ValueError: If `ignore_warning` is False, an error is thrown to warn the
       user about the possible loud sounds associated with playback
   """
+  import pyaudio
   if ignore_warning is not True:
     raise ValueError('WARNING: Playback is largely untested and can result in '+
         'VERY LOUD sounds. Use this function at your own risk. Dismiss this error '+
