@@ -13,6 +13,8 @@ import utils
 
 import matplotlib.pyplot as plt
 
+import pdb
+
 
 def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
         pad_factor=None, downsample=None, nonlinearity=None,
@@ -118,7 +120,12 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
     raise NotImplementedError('`ret_mode` is not supported.')
 
   if ret_mode == 'envs':
-    sb_out = apply_envelope_downsample(sb_out, downsample)
+    if downsample is None or callable(downsample):
+      # downsample is None or callable
+      sb_out = apply_envelope_downsample(sb_out, downsample)
+    else:
+      # interpret downsample as new sampling rate
+      sb_out = apply_envelope_downsample(sb_out, 'poly', sr, downsample)
     sb_out = apply_envelope_nonlinearity(sb_out, nonlinearity)
 
   if ret_mode == 'all':
@@ -141,10 +148,7 @@ def human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
   This first creates a an ERB filterbank with the provided input arguments for
   the provided signal. This filterbank is then used to perform the subband
   decomposition to create the subband envelopes. The resulting envelopes can be
-  optionally downsampled and then modified with a
-  nonlinearity.
-
-  To
+  optionally downsampled and then modified with a nonlinearity.
 
   Args:
     signal (array): The sound signal (waveform) in the time domain. Should be
@@ -169,11 +173,12 @@ def human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
       before filtering. Otherwise, the filters will be created assuming the
       waveform signal will be padded to length pad_factor*signal_length.
     downsample (None, int, callable, optional): The `downsample` argument can
-      be an downsampling factor, a callable (to perform custom downsampling),
-      or None to return the unmodified cochleagram; see
-      `apply_envelope_downsample` for more information. If `ret_mode` is
-      'envs', this will be applied to the cochleagram before the nonlinearity.
-      Providing a callable for custom downsampling is suggested.
+      be the target sampling rate for polyphase resampling,
+      a callable (to perform custom downsampling), or None to return the
+      unmodified cochleagram; see `apply_envelope_downsample` for more
+      information. If `ret_mode` is 'envs', this will be applied to the
+      cochleagram before the nonlinearity. Providing a callable for custom
+      downsampling is suggested.
     nonlinearity (None, int, callable, optional): The `nonlinearity` argument
       can be an predefined type, a callable (to apply a custom nonlinearity),
       or None to return the unmodified cochleagram; see
@@ -214,10 +219,8 @@ def batch_human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
   raise NotImplementedError()
 
 
-def invert_cochleagram_with_filterbank(cochleagram, filters, sr, env_sr=None, target_rms=100, downsample=None, nonlinearity=None, n_iter=5, test=None):
-  coch_length = cochleagram.shape[1]
+def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=100, downsample=None, nonlinearity=None, n_iter=5, test=None):
   # decompress envelopes
-  print(nonlinearity)
   cochleagram = apply_envelope_nonlinearity(cochleagram, nonlinearity, invert=True)
 
   # # upsample
@@ -225,12 +228,17 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, env_sr=None, ta
   #   env_sr = sr
   # ds_factor = sr / env_sr
   # synth_size = ds_factor * coch_length
-  # cochleagram = apply_envelope_downsample(cochleagram, downsample, invert=True)
+  if downsample is None or callable(downsample):
+    cochleagram = apply_envelope_downsample(cochleagram, downsample, invert=True) # downsample is None or callable
+  else:
+    # interpret downsample as new sampling rate
+    cochleagram = apply_envelope_downsample(cochleagram, 'poly', sr, downsample, invert=True)
 
   # dT = 1 / ds_factor
   # x = np.linspace(1, coch_length, coch_length, endpoint=True)
   # xI = np.linspace(dT, coch_length, dT * coch_length, endpoint=True)
   # upsampledEnv = interp1(x, xI, cochleagram)
+  coch_length = cochleagram.shape[1]
 
   # generated signal starts from noise
   synth_size = coch_length
@@ -238,7 +246,7 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, env_sr=None, ta
   synth_sound = np.random.random(synth_size)  # uniform noise
   # synth_sound = np.random.randn(synth_size)  # gaussian noise
 
-  target_subband_mags = target_rms  # don't know what this is
+  print("\t\tSynth signal shape: %s" % synth_sound.shape)
 
   # iteratively enforce envelopes on cochleagram of iter_noise
   for i in range(n_iter):
@@ -271,68 +279,97 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, env_sr=None, ta
 
 
 def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
-        pad_factor=None, env_sr=None, downsample=None, nonlinearity=None, n_iter=1000, strict=True, test=None):
-  signal_length = cochleagram.shape[1]
+        pad_factor=None, env_sr=None, downsample=None, nonlinearity=None, n_iter=100, strict=True, test=None):
+  # decompress envelopes
+  cochleagram_ref = apply_envelope_nonlinearity(cochleagram, nonlinearity, invert=True)
+
+  # upsample envelopes
+  if downsample is None or callable(downsample):
+    # downsample is None or callable
+    cochleagram = apply_envelope_downsample(cochleagram_ref, downsample, invert=True)
+  else:
+    # interpret downsample as new sampling rate
+    cochleagram_ref = apply_envelope_downsample(cochleagram_ref, 'poly', sr, downsample, invert=True)
+  signal_length = cochleagram_ref.shape[1]
+
   # generate filterbank
   filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(signal_length,
       sr, n, low_lim, hi_lim, sample_factor, pad_factor=pad_factor,
       full_filter=True, strict=strict)
 
-  out_sig = invert_cochleagram_with_filterbank(cochleagram, filts, sr, n_iter=n_iter, nonlinearity=nonlinearity, test=test)
+  # invert filterbank
+  out_sig = invert_cochleagram_with_filterbank(cochleagram_ref, filts, sr, n_iter=n_iter, test=test)
 
   return out_sig
 
 
-def apply_envelope_downsample(subband_envelopes, downsample, env_sr=None, audio_sr=None, invert=False):
+def apply_envelope_downsample(subband_envelopes, mode, audio_sr=None, env_sr=None, invert=False, strict=True):
   """Apply a downsampling operation to cochleagram subband envelopes.
 
-  The `downsample` argument can be an downsampling factor, a callable
-  (to perform custom downsampling), or None to return the unmodified cochleagram.
+  The `mode` argument can be a predefined downsampling type from
+  {'poly', 'resample', 'decimate'}, a callable (to perform custom downsampling),
+  or None to return the unmodified cochleagram. If `mode` is a predefined type,
+  `audio_sr` and `env_sr` are required.
 
   Args:
-    subband_envelopes (array): Cochleagram subbands to downsample.
-    downsample (int, callable, None): Determines the downsampling operation
-      to apply to the cochleagram. If this is an int, assume that `downsample`
-      represents the downsampling factor and apply scipy.signal.decimate to the
-      cochleagram, over axis=1. If `downsample` is a python callable
-      (e.g., function), it will be applied to `subband_envelopes`. If this is
-      None, no  downsampling is performed and the unmodified cochleagram is
-      returned.
+    subband_envelopes (array): Cochleagram subbands to mode.
+    mode ({'poly', 'resample', 'decimate', callable, None}): Determines the
+      downsampling operation to apply to the cochleagram. 'decimate' will
+      resample using scipy.signal.decimate with audio_sr/env_sr as the
+      downsampling factor. 'resample' will downsample using
+      scipy.signal.resample with np.ceil(subband_envelopes.shape[1]*(audio_sr/env_sr))
+      as the number of samples. 'poly' will resample using scipy.signal.resample_poly
+      with `env_sr` as the upsampling factor and `audio_sr` as the downsampling
+      factor. If `mode` is a python callable (e.g., function), it will be
+      applied to `subband_envelopes`. If this is None, no  downsampling is
+      performed and the unmodified cochleagram is returned.
+    audio_sr (int, optional): If using a predefined sampling `mode`, this
+      represents the sampling rate of the original signal.
+    env_sr (int, optional): If using a predefined sampling `mode`, this
+      represents the sampling rate of the downsampled subband envelopes.
+    invert (bool, optional):  If using a predefined sampling `mode`, this
+      will invert (i.e., upsample) the subband envelopes using the values
+      provided in `audio_sr` and `env_sr`.
+    strict (bool, optional): If using a predefined sampling `mode`, this
+      ensure the downsampling will result in an integer number of samples. This
+      should mean the upsample(downsample(x)) will have the same number of
+      samples as x.
 
   Returns:
     array:
     **downsampled_subband_envelopes**: The subband_envelopes after being
-      downsampled with `downsample`.
+      downsampled with `mode`.
   """
-  if downsample is None:
+  if mode is None:
     pass
-  elif callable(downsample):
+  elif callable(mode):
     # apply the downsampling function
-    subband_envelopes = downsample(subband_envelopes)
+    subband_envelopes = mode(subband_envelopes)
   else:
-    downsample = downsample.lower()
+    mode = mode.lower()
     if audio_sr is None:
       raise ValueError('`audio_sr` cannot be None. Provide sampling rate of original audio signal.')
     if env_sr is None:
       raise ValueError('`env_sr` cannot be None. Provide sampling rate of subband envelopes (cochleagram).')
 
-    if downsample == 'decimate':
+    if mode == 'decimate':
       if invert:
         raise NotImplementedError()
       else:
-        # assume that downsample is the downsampling factor
         # was BadCoefficients error with Chebyshev type I filter [default]
         subband_envelopes = scipy.signal.decimate(subband_envelopes, audio_sr // env_sr, axis=1, ftype='fir') # this caused weird banding artifacts
-    if downsample == 'resample':
+    elif mode == 'resample':
       if invert:
         subband_envelopes = scipy.signal.resample(subband_envelopes, np.ceil(subband_envelopes.shape[1]*(audio_sr/env_sr)), axis=1)  # fourier method: this causes NANs that get converted to 0s
       else:
         subband_envelopes = scipy.signal.resample(subband_envelopes, np.ceil(subband_envelopes.shape[1]*(env_sr/audio_sr)), axis=1)  # fourier method: this causes NANs that get converted to 0s
-    if downsample == 'poly':
+    elif mode == 'poly':
       if invert:
         subband_envelopes = scipy.signal.resample_poly(subband_envelopes, audio_sr, env_sr, axis=1)  # this requires v0.18 of scipy
       else:
         subband_envelopes = scipy.signal.resample_poly(subband_envelopes, env_sr, audio_sr, axis=1)  # this requires v0.18 of scipy
+    else:
+      raise ValueError('Unsupported downsampling `mode`: %s' % mode)
   subband_envelopes[subband_envelopes < 0] = 0
   return subband_envelopes
 
@@ -383,7 +420,7 @@ def apply_envelope_nonlinearity(subband_envelopes, nonlinearity, invert=False):
       dtype_eps = np.finfo(subband_envelopes.dtype).eps
       subband_envelopes[subband_envelopes == 0] = dtype_eps
       subband_envelopes = 20 * np.log10(subband_envelopes / np.max(subband_envelopes))
-      subband_envelopes[subband_envelopes] < -60 = -60
+      subband_envelopes[subband_envelopes < -60] = -60
   elif callable(nonlinearity):
     subband_envelopes = nonlinearity(subband_envelopes)
   else:
@@ -398,10 +435,18 @@ def demo_human_cochleagram(signal=None, sr=None, downsample=None, nonlinearity=N
       cochleagram will be generated with some sensible parameters. If this is
       None, a synthesized tone (harmonic stack of the first 40 harmonics) will
       be used.
-    downsample({'poly', 'resample', 'decimate', None}): Determines downsampling
-      method to apply.
-    nonlinearity({'log', 'power', None}): Determines nonlinearity method to
-      apply.
+    sr: (int, optional): If `signal` is not None, this is the sampling rate
+      associated with the signal.
+    downsample({None, int, callable}, optional): Determines downsampling method to apply.
+      If None, no downsampling will be applied. If this is an int, it will be
+      interpreted as the upsampling factor in polyphase resampling
+      (with `sr` as the downsampling factor). A custom downsampling function can
+      be provided as a callable. The callable will be called on the subband
+      envelopes.
+    nonlinearity({None, 'db', 'power', callable}, optional): Determines
+      nonlinearity method to apply. None applies no nonlinearity. 'db' will
+      convert output to decibels (truncated at -60). 'power' will apply 3/10
+      power compression.
   """
   if signal is None:
     dur = 50 / 1000
@@ -414,36 +459,13 @@ def demo_human_cochleagram(signal=None, sr=None, downsample=None, nonlinearity=N
     hi_lim = 20000
     n = None
 
-    # t = utils.matlab_arange(0, 200/1000, SR)
     t = np.arange(0, dur + 1 / sr, 1 / sr)
     signal = np.zeros_like(t)
     for i in range(1,40+1):
       signal += np.sin(2 * np.pi * f0 * i * t)
-    # print(signal.shape)
 
-  if downsample is None:
-    downsample_fx = None
-  elif downsample == 'poly':
-    downsample_fx = lambda x: scipy.signal.resample_poly(x, env_sr, sr, axis=1)
-  elif downsample == 'resample':
-    downsample_fx = lambda x: scipy.signal.resample(x, np.ceil(x.shape[1]*(env_sr/sr)), axis=1)  # fourier method: this causes NANs that get converted to 0s
-  elif downsample == 'decimate':
-    downsample_fx = lambda x: scipy.signal.decimate(x, q, axis=1, ftype='fir') # this caused weird banding artifacts
-  else:
-    raise NotImplementedError()
-
-  if nonlinearity is None:
-    nonlinearity_fx = None
-  elif nonlinearity == 'db':
-    nonlinearity_fx = 'db'
-  elif nonlinearity == 'power':
-    nonlinearity_fx = 'power'
-  else:
-    raise NotImplementedError()
-
-  # human_coch = human_cochleagram(signal, sr, strict=False)
   human_coch = human_cochleagram(signal, sr, n=n, sample_factor=2,
-      pad_factor=pad_factor, downsample=downsample_fx, nonlinearity=nonlinearity_fx,
+      pad_factor=pad_factor, downsample=downsample, nonlinearity=nonlinearity,
       ret_mode='envs', strict=False)
 
   img = np.flipud(human_coch)
@@ -454,7 +476,7 @@ def demo_human_cochleagram(signal=None, sr=None, downsample=None, nonlinearity=N
   return img, {'signal': signal, 'sr': sr}
 
 
-def demo_invert_cochleagram(signal=None, sr=None):
+def demo_invert_cochleagram(signal=None, sr=None, downsample=None, nonlinearity=None):
   if signal is None:
     dur = 50 / 1000
     sr = 20000
@@ -476,15 +498,8 @@ def demo_invert_cochleagram(signal=None, sr=None):
     for i in range(1,40+1):
       signal += np.sin(2 * np.pi * f0 * i * t)
 
-  downsample_fx = None
-  # downsample_fx = 'poly'
-  env_sr = 6000
-
-  nonlinearity_fx = None
-  # nonlinearity_fx = 'db'
-  # nonlinearity_fx = 'power'
-
-  coch = human_cochleagram(signal, sr, downsample=downsample_fx, nonlinearity=nonlinearity_fx, strict=False)
+  coch = human_cochleagram(signal, sr, downsample=downsample, nonlinearity=nonlinearity, strict=False)
+  print('Coch Shape ', coch.shape)
   # # coch = np.flipud(coch)
   # downsample_fx = 'poly'
   # plt.subplot(311)
@@ -504,12 +519,13 @@ def demo_invert_cochleagram(signal=None, sr=None):
   # print(inv_coch.shape)
   # utils.cochshow(inv_coch)
 
+  print("\t\tOriginal signal shape: %s" % signal.shape)
   test = lambda: utils.play_array(signal, ignore_warning=True)
-  invert_cochleagram(coch, sr, n, low_lim, hi_lim, sample_factor, pad_factor=None, nonlinearity=nonlinearity_fx, strict=False, test=test)
+  invert_cochleagram(coch, sr, n, low_lim, hi_lim, sample_factor, pad_factor=None, downsample=downsample, nonlinearity=nonlinearity, strict=False, test=test)
 
 
 def main():
-  demo_invert_cochleagram()
+  demo_invert_cochleagram(downsample=3000)
 
 
 if __name__ == '__main__':
