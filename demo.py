@@ -225,6 +225,18 @@ def demo_invert_cochleagram(signal=None, sr=None, n=None, playback=False):
 
 
 def demo_playback(signal, sr, ignore_warning=False):
+  """Demo audio playback with pyaudio.
+
+  Args:
+    signal (array, optional): Signal containing waveform data.
+    sr (int, optional): Sampling rate of the input signal.
+    ignore_warning (bool, optional): Determines if audio signals will be played
+      (using pyaudio). NOTE: Be careful with the volume when using playback,
+      things can get *very loud*.
+
+  Returns:
+    None
+  """
   # audio playback
   pyaudio_params={'channels': utils.get_channels(signal),
                   'rate': sr,
@@ -283,6 +295,10 @@ def main(ignore_playback_warning=False, mode='rand_sound'):
     ignore_playback_warning (bool, optional): To use audio playback, you must
       acknowledge that things can get *very loud* by setting
       `ignore_playback_warning` to True.
+    mode ({'rand_sound', other}): Set the mode for the demo. If this is
+      'rand_sound', a sound from the demo_stim/ directory will be chosen
+      at random and used for the demos. If this is anything else, a harmonic
+      stack of 40 harmonics and an f0=100Hz will be generated and used.
 
   Returns:
     None
