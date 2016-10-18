@@ -8,11 +8,8 @@ Generate cochleagrams in python.
 + quick wrapper for batch cochleagram generation
 + test padding (pad_factor)
 + sensible parameters for downsampling?
-+ sensible parameters for nonlinearity?
 + clean up old and deprecated methods
 + write readme
-+ write demo file
-+ cochleagram inversion
 + python compatibility issues
 + erb filters fails with certain arguments: 
 `N: 680, sample_factor: 15, signal_length: 2433, sr: 32593, low_lim: 147, hi_lim: 16296, pad_factor: None`

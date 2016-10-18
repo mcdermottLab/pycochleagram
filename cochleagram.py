@@ -219,7 +219,7 @@ def batch_human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
   raise NotImplementedError()
 
 
-def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=100, downsample=None, nonlinearity=None, n_iter=5, test=None):
+def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=300, downsample=None, nonlinearity=None, n_iter=20, test=None):
   # decompress envelopes
   cochleagram = apply_envelope_nonlinearity(cochleagram, nonlinearity, invert=True)
 
@@ -250,7 +250,7 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=100,
 
   # iteratively enforce envelopes on cochleagram of iter_noise
   for i in range(n_iter):
-    if i % 100 == 0:
+    if i % 10 == 0:
       if i > 0:
         plt.subplot(211)
         plt.title('Original Cochleagram')
@@ -258,28 +258,29 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=100,
         plt.subplot(212)
         plt.title('Synth Cochleagram iter: %s' % i)
         utils.cochshow(np.abs(synth_analytic_subbands))
-      test()
-      sleep(1)
-      utils.play_array(synth_sound, ignore_warning=True)
-      sleep(1)
+        test()
+        sleep(1)
+        utils.play_array(synth_sound, ignore_warning=True)
+        sleep(1)
 
     print('inverting iteration: %s' % (i + 1))
     synth_sound = target_rms / utils.rms(synth_sound) * synth_sound
 
     # GET THE ERROR OF ENVS FROM DOWNSAMPLING
     synth_analytic_subbands = sb.generate_analytic_subbands(synth_sound, filters)
-    synth_subband_mags = np.abs(synth_analytic_subbands)  # complex magnitude
     # synth_subband_phases = np.angle(synth_analytic_subbands)  # complex phases
+    synth_subband_mags = np.abs(synth_analytic_subbands)  # complex magnitude
     synth_subband_phases = synth_analytic_subbands / synth_subband_mags  # should also be phases, converges faster
 
     synth_subbands = synth_subband_phases * cochleagram
     synth_subbands = np.real(synth_subbands)
     np.nan_to_num(synth_size)
     synth_sound = sb.collapse_subbands(synth_subbands, filters)
+  return synth_sound
 
 
 def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
-        pad_factor=None, env_sr=None, downsample=None, nonlinearity=None, n_iter=100, strict=True, test=None):
+        pad_factor=None, env_sr=None, downsample=None, nonlinearity=None, n_iter=50, strict=True, test=None):
   # decompress envelopes
   cochleagram_ref = apply_envelope_nonlinearity(cochleagram, nonlinearity, invert=True)
 
@@ -426,107 +427,3 @@ def apply_envelope_nonlinearity(subband_envelopes, nonlinearity, invert=False):
   else:
     raise ValueError('argument "nonlinearity" must be "power", "log", or a function.')
   return subband_envelopes
-
-
-def demo_human_cochleagram(signal=None, sr=None, downsample=None, nonlinearity=None, interact=True):
-  """Demo the cochleagram generation.
-
-    signal (array, optional): If a time-domain signal is provided, its
-      cochleagram will be generated with some sensible parameters. If this is
-      None, a synthesized tone (harmonic stack of the first 40 harmonics) will
-      be used.
-    sr: (int, optional): If `signal` is not None, this is the sampling rate
-      associated with the signal.
-    downsample({None, int, callable}, optional): Determines downsampling method to apply.
-      If None, no downsampling will be applied. If this is an int, it will be
-      interpreted as the upsampling factor in polyphase resampling
-      (with `sr` as the downsampling factor). A custom downsampling function can
-      be provided as a callable. The callable will be called on the subband
-      envelopes.
-    nonlinearity({None, 'db', 'power', callable}, optional): Determines
-      nonlinearity method to apply. None applies no nonlinearity. 'db' will
-      convert output to decibels (truncated at -60). 'power' will apply 3/10
-      power compression.
-  """
-  if signal is None:
-    dur = 50 / 1000
-    sr = 20000
-    env_sr = 6000
-    pad_factor = 1
-    q = sr // env_sr
-    f0 = 100
-    low_lim = 50
-    hi_lim = 20000
-    n = None
-
-    t = np.arange(0, dur + 1 / sr, 1 / sr)
-    signal = np.zeros_like(t)
-    for i in range(1,40+1):
-      signal += np.sin(2 * np.pi * f0 * i * t)
-
-  human_coch = human_cochleagram(signal, sr, n=n, sample_factor=2,
-      pad_factor=pad_factor, downsample=downsample, nonlinearity=nonlinearity,
-      ret_mode='envs', strict=False)
-
-  img = np.flipud(human_coch)
-  if interact:
-    print('sub env shape: ', human_coch.shape)
-    utils.cochshow(img)
-
-  return img, {'signal': signal, 'sr': sr}
-
-
-def demo_invert_cochleagram(signal=None, sr=None, downsample=None, nonlinearity=None):
-  if signal is None:
-    dur = 50 / 1000
-    sr = 20000
-    env_sr = 6000
-    pad_factor = 1
-    q = sr // env_sr
-    f0 = 100
-    low_lim = 50
-    hi_lim = 20000
-    n = None
-    if n is None:
-      n = int(np.floor(erb.freq2erb(hi_lim) - erb.freq2erb(low_lim)) - 1)
-
-    sample_factor = 2
-
-    # t = utils.matlab_arange(0, 200/1000, SR)
-    t = np.arange(0, dur + 1 / sr, 1 / sr)
-    signal = np.zeros_like(t)
-    for i in range(1,40+1):
-      signal += np.sin(2 * np.pi * f0 * i * t)
-
-  coch = human_cochleagram(signal, sr, downsample=downsample, nonlinearity=nonlinearity, strict=False)
-  print('Coch Shape ', coch.shape)
-  # # coch = np.flipud(coch)
-  # downsample_fx = 'poly'
-  # plt.subplot(311)
-  # utils.cochshow(coch, interact=False)
-  # print(coch.shape)
-  # plt.subplot(312)
-  # coch = apply_envelope_downsample(coch, downsample_fx, env_sr, sr, invert=False)
-  # # # coch = coch ** (3/10)
-  # # max_coch = coch.max()
-  # # coch = 20 * np.log10(coch / coch.max())
-  # utils.cochshow(coch, interact=False)
-  # plt.subplot(313)
-  # # inv_coch = apply_envelope_nonlinearity(coch, nonlinearity_fx, invert=True)
-  # inv_coch = apply_envelope_downsample(coch, downsample_fx, env_sr, sr, invert=True)
-  # # # inv_coch = coch ** (10/3)
-  # # inv_coch = np.power(10, coch / 20)
-  # print(inv_coch.shape)
-  # utils.cochshow(inv_coch)
-
-  print("\t\tOriginal signal shape: %s" % signal.shape)
-  test = lambda: utils.play_array(signal, ignore_warning=True)
-  invert_cochleagram(coch, sr, n, low_lim, hi_lim, sample_factor, pad_factor=None, downsample=downsample, nonlinearity=nonlinearity, strict=False, test=test)
-
-
-def main():
-  demo_invert_cochleagram(downsample=3000)
-
-
-if __name__ == '__main__':
-  main()
