@@ -29,11 +29,16 @@ def matlab_arange(start, stop, num):
 
 
 def rms(a):
+  """Compute root mean squared of array.
+
+  Args:
+    a (array): Input array.
+
+  Returns:
+    array:
+      **rms_a**: Root mean squared of array.
+  """
   return np.sqrt(np.mean(a * a))
-
-
-def dbsnr(self, s, n):
-    return 20 * np.log10(rms(s) / rms(n))
 
 
 ##### Display and Playback Methods #####
@@ -45,10 +50,11 @@ def cochshow(cochleagram, interact=True, cmap='viridis'):
     interact (bool, optional): Determines if interactive plot should be shown.
       If True (default), plot will be shown. If this is False, the figure will
       be created but not displayed.
+    cmap (str, optional): A matplotlib cmap name to use for this plot.
 
   Returns:
     AxesImage:
-      **image**: Whatever matplotlib.pyplot.plt returns.
+    **image**: Whatever matplotlib.pyplot.plt returns.
   """
   f = imshow(cochleagram, aspect='auto', cmap=cmap)
   if interact:
@@ -58,6 +64,13 @@ def cochshow(cochleagram, interact=True, cmap='viridis'):
 
 def get_channels(snd_array):
   """Returns the number of channels in the sound array.
+
+  Args:
+    snd_array (array): Array (of sound data).
+
+  Returns:
+    int:
+    **n_channels**: The number of channels in the input array.
   """
   n_channels = 1
   if snd_array.ndim > 1:
@@ -127,11 +140,19 @@ def play_array(snd_array, rescale='normalize', pyaudio_params={}, ignore_warning
       be careful with this as this can be *very* loud if playedback!).
     pyaudio_params (dict): A dictionary containing any input arguments to pass
       to the pyaudio.PyAudio.open method.
+    ignore_warning (bool, optional): Determines if audio playback will occur.
+      The playback volume can be very loud, so to use this method,
+      `ignore_warning` must be True. If this is False, an error will be
+      thrown warning the user about this issue.
 
   Returns:
     str:
       **sound_str**: The string representation (used by pyaudio) of the sound
         array.
+
+  Raises:
+    ValueError: If `ignore_warning` is False, an error is thrown to warn the
+      user about the possible loud sounds associated with playback
   """
   if ignore_warning is not True:
     raise ValueError('WARNING: Playback is largely untested and can result in '+
