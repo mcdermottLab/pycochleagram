@@ -343,13 +343,13 @@ def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
   # upsample envelopes
   if downsample is None or callable(downsample):
     # downsample is None or callable
-    cochleagram = apply_envelope_downsample(cochleagram_ref, downsample, invert=True)
+    cochleagram_ref = apply_envelope_downsample(cochleagram_ref, downsample, invert=True)
   else:
     # interpret downsample as new sampling rate
     cochleagram_ref = apply_envelope_downsample(cochleagram_ref, 'poly', sr, downsample, invert=True)
   signal_length = cochleagram_ref.shape[1]
 
-  # generate filterbank
+# generate filterbank
   filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(signal_length,
       sr, n, low_lim, hi_lim, sample_factor, pad_factor=pad_factor,
       full_filter=True, strict=strict)
