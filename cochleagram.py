@@ -10,6 +10,8 @@ import erbfilter as erb
 import subband as sb
 import utils
 
+import matplotlib.pyplot as plt
+
 
 def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
         pad_factor=None, downsample=None, nonlinearity=None,
@@ -259,15 +261,25 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=100,
 
   coch_length = cochleagram.shape[1]
 
+  cochleagram /= cochleagram.max()
+  print('ref coch: [%s, %s]' % (cochleagram.min(), cochleagram.max()))
+
   # generated signal starts from noise
   synth_size = coch_length
   synth_sound = np.random.random(synth_size)  # uniform noise
   # synth_sound = np.random.randn(synth_size)  # gaussian noise
 
+  print('synth sound [%s, %s]' % (synth_sound.min(), synth_sound.max()))
+
   # iteratively enforce envelopes on cochleagram of iter_noise
   for i in range(n_iter):
-    print('inverting iteration: %s' % (i + 1))
-    synth_sound = target_rms / utils.rms(synth_sound) * synth_sound
+    # calculate error in decibels between original and synthesized cochleagrams
+    # if i > 0:
+    #   db_error = np.abs(cochleagram - np.abs(synth_analytic_subbands))
+    # else:
+    #   db_error = np.abs(cochleagram - np.zeros_like(cochleagram))
+
+    # synth_sound = target_rms / utils.rms(synth_sound) * synth_sound
 
     # GET THE ERROR OF ENVS FROM DOWNSAMPLING
     synth_analytic_subbands = sb.generate_analytic_subbands(synth_sound, filters)
@@ -279,7 +291,36 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=100,
     synth_subbands = np.real(synth_subbands)
     np.nan_to_num(synth_size)
     synth_sound = sb.collapse_subbands(synth_subbands, filters)
-  return synth_sound
+
+    # db_error = np.sum(np.power(cochleagram/cochleagram.max() - synth/synth.max(), 2))
+
+    synth_coch = np.abs(synth_analytic_subbands)
+
+    print('ref coch: [%s, %s], synth coch: [%s, %s]' % (cochleagram.min(), cochleagram.max(), synth_coch.min(), synth_coch.max()))
+
+    # compute error using raw cochleagrams
+    db_error = 10 * np.log10(np.sum(np.power(cochleagram - synth_coch, 2)) /
+                np.sum(np.power(cochleagram, 2)))
+
+    # # computer error using rescaled cochleagrams
+    # db_error = 10 * np.log10(np.sum(np.power(cochleagram/cochleagram.max() - synth_coch/synth_coch.max(), 2)) /
+    #             np.sum(np.power(cochleagram/cochleagram.max(), 2)))
+
+    # utils.cochshow(db_error)
+    # exit()
+    # print(db_error.min(), ', ', db_error.max())
+    print('inverting iteration: %s, error (db): %s' % (i + 1, db_error))
+    # plt.subplot(211)
+    # utils.cochshow(cochleagram, interact=False)
+    # plt.subplot(212)
+    # utils.cochshow(np.abs(synth_analytic_subbands))
+
+    utils.cochshow(np.power(cochleagram - synth_coch, 2), interact=False)
+    plt.show(block=False)
+    sleep(1)
+    plt.close()
+
+  return synth_sound, synth_coch
 
 
 def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
