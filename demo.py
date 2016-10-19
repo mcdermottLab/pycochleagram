@@ -193,8 +193,7 @@ def demo_invert_cochleagram(signal=None, sr=None, n=None, playback=False):
 
   # invert the cochleagram to get a signal
   coch = np.flipud(coch)  # the ouput of demo_human_cochleagram_helper is flipped
-  inv_coch_sig = cgram.invert_cochleagram(coch, sr, n, low_lim, hi_lim, sample_factor, n_iter=10, strict=False)
-  inv_coch = demo_human_cochleagram_helper(inv_coch_sig, sr, n, sample_factor=sample_factor)
+  inv_coch_sig, inv_coch = cgram.invert_cochleagram(coch, sr, n, low_lim, hi_lim, sample_factor, n_iter=10, strict=False)
 
   print('Generated inverted cochleagram')
   print('Original signal shape: %s, Inverted cochleagram signal shape: %s' % (signal.shape, inv_coch_sig.shape))
@@ -208,7 +207,7 @@ def demo_invert_cochleagram(signal=None, sr=None, n=None, playback=False):
 
   plt.subplot(212)
   plt.title('Cochleagram of inverted signal')
-  utils.cochshow(np.flipud(inv_coch), interact=False)  # this signal needs to be flipped
+  utils.cochshow(inv_coch, interact=False)  # this signal needs to be flipped
   plt.ylabel('filter #')
   plt.xlabel('time')
   plt.gca().invert_yaxis()
@@ -315,6 +314,7 @@ def main(ignore_playback_warning=False, mode='rand_sound'):
   DEMO_PATH = 'demo_stim'
   if mode == 'rand_sound':
     rfn = choice([os.path.join(DEMO_PATH, f)for f in os.listdir(DEMO_PATH)])
+    # rfn = [os.path.join(DEMO_PATH, f)for f in os.listdir(DEMO_PATH)][1]
     print('Running demo with sound file: %s ' % rfn)
     demo_stim, demo_sr = utils.wav_to_array(rfn)
     demo_n = 38  # default filter for low_lim=50 hi_lim=20000
@@ -336,10 +336,13 @@ def main(ignore_playback_warning=False, mode='rand_sound'):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
-  parser.add_argument('-p', '--playback', action="store_true",
+  parser.add_argument('-p', '--playback', action='store_true',
       help='If True, will playback audio signals as part of demo. NOTE: This can get LOUD.')
+  parser.add_argument('-m', '--mode', default='rand_sound',
+      help='Determines what type of signals to use for the demo. Can be "harm_stack" for a synthesized tone, or "rand_sound" '+
+      'for a random soundfile in the demo_stim/ directory. Defaults to "rand_sound".')
   args = parser.parse_args()
 
   if not args.playback:
     print('\nNOTE: Audio playback has been disabled for this demo. Enable with the flag -p. NOTE: This can get LOUD.\n')
-  main(args.playback)
+  main(args.playback, mode=args.mode)
