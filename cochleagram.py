@@ -508,5 +508,5 @@ def apply_envelope_nonlinearity(subband_envelopes, nonlinearity, invert=False):
   elif callable(nonlinearity):
     subband_envelopes = nonlinearity(subband_envelopes)
   else:
-    raise ValueError('argument "nonlinearity" must be "power", "log", or a function.')
+    raise ValueError('argument "nonlinearity" must be "power", "db", or a function.')
   return subband_envelopes

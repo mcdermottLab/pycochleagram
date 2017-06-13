@@ -55,7 +55,7 @@ def cochshow(cochleagram, interact=True, cmap='viridis'):
     AxesImage:
     **image**: Whatever matplotlib.pyplot.plt returns.
   """
-  f = imshow(cochleagram, aspect='auto', cmap=cmap)
+  f = imshow(cochleagram, aspect='auto', cmap=cmap, origin='lower', interpolation='nearest')
   if interact:
     show()
   return f
@@ -367,6 +367,50 @@ def irfft(a, n=None, axis=-1, mode='auto', params=None):
                               'use "np" or "fftw".')
 
 
+def hilbert(a, axis=None, mode='auto', fft_params=None):
+  """Compute the Hilbert transform of time-domain signal.
+
+  Provides access to FFTW-based implementation of the Hilbert transform.
+
+  Args:
+    a (array): Time-domain signal.
+    mode (str): Determines which FFT implementation will be used. Options are
+      'fftw', 'np', and 'auto'. Using 'auto', will attempt to use a pyfftw
+      implementation with some sensible parameters (if the module is
+      available), and will use numpy's fftpack implementation otherwise.
+    fft_params (dict, None, optional): Dictionary of input arguments to provide to
+      the call computing fft  and ifft. If `mode` is 'auto' and params dict is None,
+      sensible values will be chosen. If `fft_params` is not None, it will not
+      be altered.
+
+  Returns:
+    array:
+    **hilbert_a**: Hilbert transform of input array `a`, in the time domain.
+  """
+  if axis is None:
+    axis = np.argmax(a.shape)
+  N = a.shape[axis]
+  if N <= 0:
+    raise ValueError("N must be positive.")
+
+  # convert to frequency space
+  a = fft(a, mode=mode, params=fft_params)
+
+  # perform the hilbert transform in the frequency domain
+  # algorithm from scipy.signal.hilbert
+  h = np.zeros(N)  # don't modify the input array
+  # create hilbert multiplier
+  if N % 2 == 0:
+    h[0] = h[N // 2] = 1
+    h[1:N // 2] = 2
+  else:
+    h[0] = 1
+    h[1:(N + 1) // 2] = 2
+  ah = a * h  # apply hilbert transform
+
+  return ifft(ah, mode=mode, params=fft_params)
+
+
 def fhilbert(a, axis=None, mode='auto', ifft_params=None):
   """Compute the Hilbert transform of the provided frequency-space signal.
 
@@ -380,7 +424,7 @@ def fhilbert(a, axis=None, mode='auto', ifft_params=None):
       'fftw', 'np', and 'auto'. Using 'auto', will attempt to use a pyfftw
       implementation with some sensible parameters (if the module is
       available), and will use numpy's fftpack implementation otherwise.
-    params (dict, None, optional): Dictionary of input arguments to provide to
+    iff_params (dict, None, optional): Dictionary of input arguments to provide to
       the call computing ifft. If `mode` is 'auto' and params dict is None,
       sensible values will be chosen. If `ifft_params` is not None, it will not
       be altered.
