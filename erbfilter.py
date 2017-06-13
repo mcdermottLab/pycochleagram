@@ -182,10 +182,10 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
     signal_length *= pad_factor
 
   if np.remainder(signal_length, 2) == 0:  # even length
-    n_freqs = signal_length / 2  # .0 does not include DC, likely the sampling grid
+    n_freqs = signal_length // 2  # .0 does not include DC, likely the sampling grid
     max_freq = sr / 2  # go all the way to nyquist
   else:  # odd length
-    n_freqs = (signal_length - 1) / 2  # .0
+    n_freqs = (signal_length - 1) // 2  # .0
     max_freq = sr * (signal_length - 1) / 2 / signal_length  # just under nyquist
 
   # verify the high limit is allowed by the sampling rate
