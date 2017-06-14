@@ -2,6 +2,8 @@
 Generate cochleagrams in Python. Ported from Josh McDermott's MATLAB code. 
 
 ## Overview:
+**Note**: Numpy/Scipy's FFT implementation can be ridiculously slow for certain sized inputs. You can install pyfftw to get around this issue, but this must be done on a singularity container on OpenMind. 
+
 This package contains four main modules:
 + **erbfilter**: Functions for generating ERB-cosine filters. These functions
 are available in the MATLAB implementation. 
