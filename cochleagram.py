@@ -8,9 +8,7 @@ import scipy.signal
 
 import erbfilter as erb
 import subband as sb
-import utils
-
-import matplotlib.pyplot as plt
+# import utils
 
 
 def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,

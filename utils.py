@@ -27,6 +27,26 @@ def matlab_arange(start, stop, num):
   return np.linspace(start, stop, num + 1)
 
 
+def combine_signal_and_noise(signal, noise, snr):
+  """Combine the signal and noise at the provided snr.
+
+  Args:
+    signal (array-like): Signal waveform data.
+    noise (array-like): Noise waveform data.
+    snr (number): SNR level in dB.
+
+  Returns:
+    **signal_and_noise**: Combined signal and noise waveform.
+  """
+  # normalize the signal
+  signal = signal / rms(signal)
+  sf = np.power(10, snr / 10)
+  signal_rms = rms(signal)
+  noise = noise * ((signal_rms / rms(noise)) / sf)
+  signal_and_noise = signal + noise
+  return signal_and_noise
+
+
 def rms(a):
   """Compute root mean squared of array.
 
@@ -41,7 +61,7 @@ def rms(a):
 
 
 ##### Display and Playback Methods #####
-def cochshow(cochleagram, interact=True, cmap='viridis'):
+def cochshow(cochleagram, interact=True, cmap='inferno'):
   """Helper function to facilitate displaying cochleagrams.
 
   Args:
@@ -127,11 +147,13 @@ def wav_to_array(fn, rescale='standardize'):
   return snd, samp_freq
 
 
-def play_array(snd_array, rescale='normalize', pyaudio_params={}, ignore_warning=False):
+def play_array(snd_array, sr=44100, rescale='normalize', pyaudio_params={}, ignore_warning=False):
   """Play the provided sound array using pyaudio.
 
   Args:
     snd_array (array): The array containing the sound data.
+    sr (number): Sampling sr for playback; defaults to 44,100 Hz.
+    Will be overriden if `pyaudio_params` is provided.
     rescale ({'standardize', 'normalize', None}): Determines type of
       rescaling to perform. 'standardize' will divide by the max value
       allowed by the numerical precision of the input. 'normalize' will
@@ -163,7 +185,7 @@ def play_array(snd_array, rescale='normalize', pyaudio_params={}, ignore_warning
 
   _pyaudio_params = {'format': pyaudio.paFloat32,
                      'channels': 1,
-                     'rate': 44100,
+                     'rate': sr,
                      'frames_per_buffer': 1024,
                      'output': True,
                      'output_device_index': 1}
