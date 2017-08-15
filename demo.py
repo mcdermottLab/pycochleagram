@@ -319,16 +319,16 @@ def main(ignore_playback_warning=False, mode='rand_sound'):
     demo_stim, demo_sr = utils.wav_to_array(rfn)
     demo_n = 38  # default filter for low_lim=50 hi_lim=20000
   elif mode == 'batch':
-    demo_stim = np.load('demo_stim/wavs_speech_n100_2s_16k.npy')
+    demo_stim = np.load('demo_stim/wavs_speech_n10_2s_16k.npy')
     demo_sr = 16000
     demo_n = 38  # default filter for low_lim=50 hi_lim=20000
     start_time = time()
     demo_human_cochleagram_helper(demo_stim, demo_sr, demo_n, downsample=200, nonlinearity='power')
     total_time = time() - start_time
-    print('Improved Batch --> %s, %ss per coch' % (total_time, total_time / 100))
+    print('Improved Batch --> %s, %ss per coch' % (total_time, total_time / 10))
     return
   elif mode == 'naive_batch':
-    demo_stim = np.load('demo_stim/wavs_speech_n1000_2s_16k.npy')
+    demo_stim = np.load('demo_stim/wavs_speech_n10_2s_16k.npy')
     demo_sr = 16000
     demo_n = 38  # default filter for low_lim=50 hi_lim=20000
     start_time = time()
@@ -337,7 +337,7 @@ def main(ignore_playback_warning=False, mode='rand_sound'):
       temp_signal = demo_stim[i]
       demo_human_cochleagram_helper(temp_signal, demo_sr, demo_n, downsample=200, nonlinearity='power')
     total_time = time() - start_time
-    print('Naive Batch --> %s, %ss per coch' % (total_time, total_time / 1000))
+    print('Naive Batch --> %s, %ss per coch' % (total_time, total_time / 10))
     return
   else:
     demo_stim, demo_sr, demo_n = None, None, None
