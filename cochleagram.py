@@ -95,33 +95,47 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
   if n <= 0:
     raise ValueError('number of filters `n` must be positive; found: %s' % n)
 
-  signal_flat = sb.reshape_signal_canonical(signal)
+  # allow for batch generation without creating filters everytime
+  batch_signal = sb.reshape_signal_batch(signal)  # (batch_dim, waveform_samples)
 
-  filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(signal_flat.shape[0],
+  # only make the filters once
+  filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(batch_signal.shape[1],
       sr, n, low_lim, hi_lim, sample_factor, pad_factor=pad_factor,
       full_filter=True, strict=strict)
 
-  if ret_mode == 'envs' or ret_mode == 'all':
-    sb_out = sb.generate_subband_envelopes_fast(signal, filts,
-        pad_factor=pad_factor, fft_mode=fft_mode, debug_ret_all=ret_all_sb)
-  elif ret_mode == 'subband':
-    sb_out = sb.generate_subbands(signal, filts, pad_factor=pad_factor,
-        fft_mode=fft_mode, debug_ret_all=ret_all_sb)
-  elif ret_mode == 'analytic':
-    sb_out = sb.generate_subbands(signal, filts, pad_factor=pad_factor,
-        fft_mode=fft_mode)
-  else:
-    raise NotImplementedError('`ret_mode` is not supported.')
+  is_batch = batch_signal.shape[0] > 1
+  for i in range(batch_signal.shape[0]):
+    # if is_batch:
+    #   print('generating cochleagram -> %s/%s' % (i+1, batch_signal.shape[0]))
 
-  if ret_mode == 'envs':
-    if downsample is None or callable(downsample):
-      # downsample is None or callable
-      sb_out = apply_envelope_downsample(sb_out, downsample)
+    temp_signal_flat = sb.reshape_signal_canonical(batch_signal[i, ...])
+
+    if ret_mode == 'envs' or ret_mode == 'all':
+      temp_sb = sb.generate_subband_envelopes_fast(temp_signal_flat, filts,
+          pad_factor=pad_factor, fft_mode=fft_mode, debug_ret_all=ret_all_sb)
+    elif ret_mode == 'subband':
+      temp_sb = sb.generate_subbands(temp_signal_flat, filts, pad_factor=pad_factor,
+          fft_mode=fft_mode, debug_ret_all=ret_all_sb)
+    elif ret_mode == 'analytic':
+      temp_sb = sb.generate_subbands(temp_signal_flat, filts, pad_factor=pad_factor,
+          fft_mode=fft_mode)
     else:
-      # interpret downsample as new sampling rate
-      sb_out = apply_envelope_downsample(sb_out, 'poly', sr, downsample)
-    sb_out = apply_envelope_nonlinearity(sb_out, nonlinearity)
+      raise NotImplementedError('`ret_mode` is not supported.')
 
+    if ret_mode == 'envs':
+      if downsample is None or callable(downsample):
+        # downsample is None or callable
+        temp_sb = apply_envelope_downsample(temp_sb, downsample)
+      else:
+        # interpret downsample as new sampling rate
+        temp_sb = apply_envelope_downsample(temp_sb, 'poly', sr, downsample)
+      temp_sb = apply_envelope_nonlinearity(temp_sb, nonlinearity)
+
+    if i == 0:
+      sb_out = np.zeros((batch_signal.shape[0], *temp_sb.shape))
+    sb_out[i] = temp_sb
+
+  sb_out = sb_out.squeeze()
   if ret_mode == 'all':
     out_dict = {}
     # add all local variables to out_dict
@@ -199,12 +213,10 @@ def human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
       is 'envs' and a downsampling and/or nonlinearity
       operation was requested, the output will reflect these operations.
   """
-  signal_flat = sb.reshape_signal_canonical(signal)
-
   if n is None:
     n = int(np.floor(erb.freq2erb(hi_lim) - erb.freq2erb(low_lim)) - 1)
 
-  out = cochleagram(signal_flat, sr, n, low_lim, hi_lim, sample_factor, pad_factor,
+  out = cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor, pad_factor,
       downsample, nonlinearity, fft_mode, ret_mode, strict)
 
   return out

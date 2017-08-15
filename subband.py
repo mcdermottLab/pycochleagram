@@ -43,6 +43,39 @@ def reshape_signal_canonical(signal):
   return out_signal
 
 
+def reshape_signal_batch(signal):
+  """Convert the signal into a standard batch shape for use with cochleagram.py
+  functions. The first dimension is the batch dimension.
+
+  Args:
+    signal (array): The sound signal (waveform) in the time domain. Should be
+      either a flattened array with shape (n_samples,), a row vector with shape
+      (1, n_samples), a column vector with shape (n_samples, 1), or a 2D
+      matrix of the form [batch, waveform].
+
+  Returns:
+    array:
+    **out_signal**: If the input `signal` has a valid shape, returns a
+      2D version of the signal with the first dimension as the batch
+      dimension.
+
+  Raises:
+    ValueError: Raises an error of the input `signal` has invalid shape.
+  """
+  if signal.ndim == 1:  # signal is a flattened array
+    out_signal = signal.reshape((1, -1))
+  elif signal.ndim == 2:  # signal is a row or column vector
+    if signal.shape[0] == 1:
+      out_signal = signal
+    elif signal.shape[1] == 1:
+      out_signal = signal.reshape((1, -1))
+    else:  # first dim is batch dim
+      out_signal = signal
+  else:
+    raise ValueError('signal should be flat array, row or column vector, or a 2D matrix with dimensions [batch, waveform]; found %s' % signal.ndim)
+  return out_signal
+
+
 def generate_subband_envelopes_fast(signal, filters, pad_factor=None, fft_mode='auto', debug_ret_all=False):
   """Generate the subband envelopes (i.e., the cochleagram) of the signal by
   applying the provided filters.
