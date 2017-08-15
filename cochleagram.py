@@ -10,6 +10,7 @@ import erbfilter as erb
 import subband as sb
 # import utils
 
+# import ipdb
 
 def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
         pad_factor=None, downsample=None, nonlinearity=None,
@@ -132,7 +133,7 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
       temp_sb = apply_envelope_nonlinearity(temp_sb, nonlinearity)
 
     if i == 0:
-      sb_out = np.zeros((batch_signal.shape[0], *temp_sb.shape))
+      sb_out = np.zeros(([batch_signal.shape[0]] + list(temp_sb.shape)))
     sb_out[i] = temp_sb
 
   sb_out = sb_out.squeeze()
