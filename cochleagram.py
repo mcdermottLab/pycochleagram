@@ -12,6 +12,7 @@ import subband as sb
 
 # import ipdb
 
+
 def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
         pad_factor=None, downsample=None, nonlinearity=None,
         fft_mode='auto', ret_mode='envs', strict=True):

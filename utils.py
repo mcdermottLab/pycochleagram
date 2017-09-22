@@ -2,12 +2,55 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from matplotlib.pyplot import imshow, show
 import numpy as np
+import os
 from scipy.io import wavfile
 
 
+def check_if_display_exists():
+  """Check if a display is present on the machine. This can be used
+  to conditionally import matplotlib, as importing it with an interactive
+  backend on a machine without a display causes a core dump.
+
+  Returns:
+    (bool): Indicates if there is a display present on the machine.
+  """
+  havedisplay = 'DISPLAY' in os.environ
+  if not havedisplay:
+    exitval = os.system("python -c 'import matplotlib.pyplot as plt; plt.figure()'")
+    havedisplay = (exitval == 0)
+
+
+if check_if_display_exists():
+  from matplotlib.pyplot import imshow, show
+else:
+  import matplotlib
+  matplotlib.use('Agg')
+  from matplotlib.pyplot import imshow, show
+
+
 ##### Public Helper Methods #####
+def compute_cochleagram_shape(signal_len, sr, n, sample_factor, env_sr=None):
+  """Returns the shape of the cochleagram that will be created from
+  by using the provided parameters.
+
+  Args:
+    signal_len (int): Length of signal waveform.
+    sr (int): Waveform sampling rate.
+    n (int): Number of filters requested in the filter bank.
+    sample_factor (int): Degree of overcompleteness of the filter bank.
+    env_sr (int, optional): Envelope sampling rate, if None (default),
+      will equal the waveform sampling rate `sr`.
+
+  Returns:
+    tuple: Shape of the array containing the cochleagram.
+  """
+  env_sr = sr if env_sr is None else env_sr
+  n_freqs = sample_factor * (n + 1) - 1 + 2 * sample_factor
+  n_time = np.floor((env_sr / sr) * signal_len).astype(int)
+  return (n_freqs, n_time)
+
+
 def matlab_arange(start, stop, num):
   """Mimics MATLAB's sequence generation.
 

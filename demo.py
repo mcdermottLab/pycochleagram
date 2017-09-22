@@ -7,12 +7,18 @@ import os
 from random import choice
 from time import sleep, time
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.signal import welch, decimate
 
 import utils
 import erbfilter as erb
 import cochleagram as cgram
+
+if utils.check_if_display_exists():
+  from matplotlib.pyplot import imshow, show
+else:
+  import matplotlib
+  matplotlib.use('Agg')
+  from matplotlib.pyplot import imshow, show
 
 
 ### Cochleagram Generation from Waveform ###
