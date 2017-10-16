@@ -5,6 +5,7 @@ from __future__ import print_function
 import numpy as np
 import os
 from scipy.io import wavfile
+import warnings
 
 
 def check_if_display_exists():
@@ -19,14 +20,16 @@ def check_if_display_exists():
   if not havedisplay:
     exitval = os.system("python -c 'import matplotlib.pyplot as plt; plt.figure()'")
     havedisplay = (exitval == 0)
+  return havedisplay
 
 
 if check_if_display_exists():
-  from matplotlib.pyplot import imshow, show
+  from matplotlib.pyplot import imshow, show, plot
 else:
   import matplotlib
   matplotlib.use('Agg')
-  from matplotlib.pyplot import imshow, show
+  from matplotlib.pyplot import imshow, show, plot
+  warnings.warn('pycochleagram using non-interactive Agg matplotlib backend', RuntimeWarning, stacklevel=2)
 
 
 ##### Public Helper Methods #####
@@ -119,6 +122,23 @@ def cochshow(cochleagram, interact=True, cmap='inferno'):
     **image**: Whatever matplotlib.pyplot.plt returns.
   """
   f = imshow(cochleagram, aspect='auto', cmap=cmap, origin='lower', interpolation='nearest')
+  if interact:
+    show()
+  return f
+
+
+def filtshow(freqs, filts, hz_cutoffs=None, full_filter=True, use_log_x=False, interact=True):
+  filts_to_plot = filts if full_filter is False else filts[:, :filts.shape[1]/2+1]  # positive filters
+  # filts_to_plot = filts if full_filter is False else filts[:, filts.shape[1]/2-1:]
+  freqs_to_plot = np.log10(freqs) if use_log_x else freqs
+
+  print(filts_to_plot.shape)
+  f = plot(freqs_to_plot, filts_to_plot.T)
+
+  if hz_cutoffs is not None:
+    hz_cutoffs_to_plot = np.log10(hz_cutoffs) if use_log_x else hz_cutoffs
+    f = plot(hz_cutoffs_to_plot, np.zeros_like(hz_cutoffs)+filts_to_plot.max(), c='k', marker='o')
+
   if interact:
     show()
   return f
@@ -419,7 +439,8 @@ def irfft(a, n=None, axis=-1, mode='auto', params=None):
   # handle 'auto' mode
   mode, params = _parse_fft_mode(mode, params)
   # named args override params
-  d1 = {'n': n, 'axis': axis, 'norm': norm}
+  # d1 = {'n': n, 'axis': axis, 'norm': norm}
+  d1 = {'n': n, 'axis': axis}
   params = dict(d1, **params)
 
   if mode == 'fftw':

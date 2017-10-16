@@ -13,9 +13,10 @@ import subband as sb
 # import ipdb
 
 
+
 def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
         pad_factor=None, downsample=None, nonlinearity=None,
-        fft_mode='auto', ret_mode='envs', strict=True):
+        fft_mode='auto', ret_mode='envs', strict=True, **kwargs):
   """Generate the subband envelopes (i.e., the cochleagram)
   of the provided signal.
 
@@ -69,6 +70,12 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
       returns just the subbands, 'analytic' returns the analytic signal provided
       by the Hilbert transform, 'all' returns all local variables created in this
       function.
+    strict (bool, optional): If True (default), will include the extra
+      highpass and lowpass filters required to make the filterbank invertible.
+      If False, this will only perform calculations on the bandpass filters; note
+      this decreases the number of frequency channels in the output by
+       2 * `sample_factor`.
+      function is used in a way that is unsupported by the MATLAB implemenation.
     strict (bool, optional): If True (default), will throw an errors if this
       function is used in a way that is unsupported by the MATLAB implemenation.
 
@@ -101,9 +108,15 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
   batch_signal = sb.reshape_signal_batch(signal)  # (batch_dim, waveform_samples)
 
   # only make the filters once
+  if kwargs.get('no_hp_lp_filts'):
+    erb_kwargs = {'no_highpass': True, 'no_lowpass': True}
+  else:
+    erb_kwargs = {}
   filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(batch_signal.shape[1],
       sr, n, low_lim, hi_lim, sample_factor, pad_factor=pad_factor,
-      full_filter=True, strict=strict)
+      full_filter=True, strict=strict, **erb_kwargs)
+
+  # utils.filtshow(freqs, filts, hz_cutoffs, use_log_x=True)
 
   is_batch = batch_signal.shape[0] > 1
   for i in range(batch_signal.shape[0]):
@@ -151,7 +164,7 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
 
 def human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
         sample_factor=2, pad_factor=None, downsample=None, nonlinearity=None,
-        fft_mode='auto', ret_mode='envs', strict=True):
+        fft_mode='auto', ret_mode='envs', strict=True, **kwargs):
   """Convenience function to generate the subband envelopes
   (i.e., the cochleagram) of the provided signal using sensible default
   parameters for a human cochleagram.
@@ -219,7 +232,7 @@ def human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
     n = int(np.floor(erb.freq2erb(hi_lim) - erb.freq2erb(low_lim)) - 1)
 
   out = cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor, pad_factor,
-      downsample, nonlinearity, fft_mode, ret_mode, strict)
+      downsample, nonlinearity, fft_mode, ret_mode, strict, **kwargs)
 
   return out
 
@@ -262,16 +275,17 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=100,
     **inv_signal**: The waveform signal created by inverting the cochleagram.
   """
   # decompress envelopes
-  cochleagram = apply_envelope_nonlinearity(cochleagram, nonlinearity, invert=True)
+  linear_cochleagram = apply_envelope_nonlinearity(cochleagram, nonlinearity, invert=True)
 
-  # upsample
   if downsample is None or callable(downsample):
-    cochleagram = apply_envelope_downsample(cochleagram, downsample, invert=True) # downsample is None or callable
+    _wrapped_downsample = lambda coch, inv: apply_envelope_downsample(coch, downsample, invert=inv)  # downsample is None or callable
   else:
     # interpret downsample as new sampling rate
-    cochleagram = apply_envelope_downsample(cochleagram, 'poly', sr, downsample, invert=True)
+    _wrapped_downsample = lambda coch, inv: apply_envelope_downsample(coch, 'poly', sr, downsample, invert=inv)
+  # apply the upsampling
+  linear_cochleagram = _wrapped_downsample(cochleagram, True)
 
-  coch_length = cochleagram.shape[1]
+  coch_length = linear_cochleagram.shape[1]
 
   # cochleagram /= cochleagram.max()
   # print('ref coch: [%s, %s]' % (cochleagram.min(), cochleagram.max()))
@@ -298,7 +312,7 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=100,
     synth_subband_mags = np.abs(synth_analytic_subbands)  # complex magnitude
     synth_subband_phases = synth_analytic_subbands / synth_subband_mags  # should be phases
 
-    synth_subbands = synth_subband_phases * cochleagram
+    synth_subbands = synth_subband_phases * linear_cochleagram
     synth_subbands = np.real(synth_subbands)
     np.nan_to_num(synth_size)
     synth_sound = sb.collapse_subbands(synth_subbands, filters)
@@ -307,6 +321,10 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=100,
     synth_coch = np.abs(synth_analytic_subbands)
 
     # print('ref coch: [%s, %s], synth coch: [%s, %s]' % (cochleagram.min(), cochleagram.max(), synth_coch.min(), synth_coch.max()))
+
+    # apply compression and downsample if necessary to compare reference coch to synth
+    synth_coch = _wrapped_downsample(linear_cochleagram, False)
+    synth_coch = apply_envelope_nonlinearity(synth_coch, nonlinearity, invert=False)
 
     # compute error using raw cochleagrams
     db_error = 10 * np.log10(np.sum(np.power(cochleagram - synth_coch, 2)) /
@@ -370,6 +388,7 @@ def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
   Returns:
     array:
     **inv_signal**: The waveform signal created by inverting the cochleagram.
+    **inv_coch**: The inverted cochleagram.
   """
   # decompress envelopes
   cochleagram_ref = apply_envelope_nonlinearity(cochleagram, nonlinearity, invert=True)
@@ -389,9 +408,9 @@ def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
       full_filter=True, strict=strict)
 
   # invert filterbank
-  out_sig = invert_cochleagram_with_filterbank(cochleagram_ref, filts, sr, target_rms=target_rms, n_iter=n_iter)
+  inv_signal, inv_coch = invert_cochleagram_with_filterbank(cochleagram_ref, filts, sr, target_rms=target_rms, n_iter=n_iter)
 
-  return out_sig
+  return inv_signal, inv_coch
 
 
 def apply_envelope_downsample(subband_envelopes, mode, audio_sr=None, env_sr=None, invert=False, strict=True):

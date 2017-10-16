@@ -12,6 +12,7 @@ from scipy.signal import welch, decimate
 import utils
 import erbfilter as erb
 import cochleagram as cgram
+# import matplotlib.pyplot as plt
 
 if utils.check_if_display_exists():
   from matplotlib.pyplot import imshow, show
@@ -94,7 +95,7 @@ def demo_human_cochleagram(signal=None, sr=None, n=None):
   # predefined polyphase resampling with upsample factor = 10000, downsample factor = `sr`
   cochd_poly = demo_human_cochleagram_helper(signal, sr, n, downsample=10000)
   # custom downsampling function to use decimate with a downsampling factor of 2
-  custom_downsample_fx = lambda x: decimate(x, 2, axis=1, ftype='fir')
+  custom_downsample_fx = lambda x: decimate(x, 2, axis=1, ftype='fir', zero_phase=True)
   cochd_decimate = demo_human_cochleagram_helper(signal, sr, n, downsample=custom_downsample_fx)
 
   plt.subplot(221)

@@ -112,7 +112,7 @@ def make_full_filter_set(filts, signal_length=None):
   return fft_filts.T
 
 
-def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor, pad_factor=None, full_filter=True, strict=True):
+def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor, pad_factor=None, full_filter=True, strict=True, **kwargs):
   """Create ERB cosine filters, oversampled by a factor provided by "sample_factor"
 
   Args:
@@ -242,6 +242,12 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
 
   # rectify
   center_freqs[center_freqs < 0] = 1
+
+  # discard highpass and lowpass filters, if requested
+  if kwargs.get('no_lowpass'):
+    filts = filts[:, sample_factor:]
+  if kwargs.get('no_highpass'):
+    filts = filts[:, :-sample_factor]
 
   # make the full filter by adding negative components
   if full_filter:
