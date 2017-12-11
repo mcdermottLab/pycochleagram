@@ -1,14 +1,14 @@
-# Cochleagram 
+# pycochleagram 
 Generate cochleagrams natively in Python. Ported from Josh McDermott's MATLAB code. 
 
 ## Installation
 If anyone knows how to setup Python packages for distribution (or otherwise 
 how to handle imports for Python code that isn't packaged but is still shared), please let me know. Until then, using these modules can be a bit painful. 
 
-1) Download or clone this git repository containing the pyCochleagram source code.
-2) Add the path of the folder containing the pyCochleagram source code to your $PYTHONPATH environment variable. For instance, if pyCochleagram was downloaded to `~/Dev/pyCochleagram/`, you could add the following to your .bashrc:
-```export PYTHONPATH="~/Dev/pyCochleagram/:$PYTHONPATH"```
-3) Imports should work like `from pyCochleagram import cochleagram as cgram`. Let me know if you have issues with this (at some point I'll turn this code into a proper package).
+1) Download or clone this git repository containing the pycochleagram source code.
+2) Add the path of the folder containing the pycochleagram source code to your $PYTHONPATH environment variable. For instance, if pycochleagram was downloaded to `~/Dev/pycochleagram/`, you could add the following to your .bashrc:
+```export PYTHONPATH="~/Dev/pycochleagram/:$PYTHONPATH"```
+3) Imports should work like `from pycochleagram import cochleagram as cgram`. Let me know if you have issues with this (at some point I'll turn this code into a proper package).
 
 ## Demo
 There are a few demos in `demo.py`. To run these demos, navigate to the root of the project folder and run `python demo.py`. Note, you can enable audio playback with `python demo.py -p`, but be warned that this can get very loud. 
