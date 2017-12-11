@@ -5,8 +5,8 @@ from __future__ import print_function
 import warnings
 import numpy as np
 
-# import erbfilter as erb
-import utils
+# from . import erbfilter as erb
+from . import utils
 
 
 def reshape_signal_canonical(signal):

@@ -6,12 +6,10 @@ from time import sleep
 import numpy as np
 import scipy.signal
 
-import erbfilter as erb
-import subband as sb
-# import utils
+from . import erbfilter as erb
+from . import subband as sb
 
 # import ipdb
-
 
 
 def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
@@ -112,6 +110,7 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
     erb_kwargs = {'no_highpass': True, 'no_lowpass': True}
   else:
     erb_kwargs = {}
+  print(erb_kwargs)
   filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(batch_signal.shape[1],
       sr, n, low_lim, hi_lim, sample_factor, pad_factor=pad_factor,
       full_filter=True, strict=strict, **erb_kwargs)
@@ -475,10 +474,10 @@ def apply_envelope_downsample(subband_envelopes, mode, audio_sr=None, env_sr=Non
         subband_envelopes = scipy.signal.resample(subband_envelopes, np.ceil(subband_envelopes.shape[1]*(env_sr/audio_sr)), axis=1)  # fourier method: this causes NANs that get converted to 0s
     elif mode == 'poly':
       if strict:
-        n_samples = subband_envelopes.shape[1] * (env_sr / audio_sr)
+        n_samples = subband_envelopes.shape[1] * (audio_sr / env_sr) if invert else subband_envelopes.shape[1] * (env_sr / audio_sr)
         if not np.isclose(n_samples, int(n_samples)):
           raise ValueError('Choose `env_sr` and `audio_sr` such that the number of samples after polyphase resampling is an integer'+
-                           '\n(length: %s, env_sr: %s, audio_sr: %s' % (subband_envelopes.shape[1], env_sr, audio_sr))
+                           '\n(length: %s, env_sr: %s, audio_sr: %s !--> %s' % (subband_envelopes.shape[1], env_sr, audio_sr, n_samples))
       if invert:
         subband_envelopes = scipy.signal.resample_poly(subband_envelopes, audio_sr, env_sr, axis=1)  # this requires v0.18 of scipy
       else:

@@ -9,9 +9,9 @@ from time import sleep, time
 import numpy as np
 from scipy.signal import welch, decimate
 
-import utils
-import erbfilter as erb
-import cochleagram as cgram
+from . import utils
+from . import erbfilter as erb
+from . import cochleagram as cgram
 # import matplotlib.pyplot as plt
 
 if utils.check_if_display_exists():
@@ -252,9 +252,9 @@ def demo_playback(signal, sr, ignore_warning=False):
   # audio playback
   pyaudio_params={'channels': utils.get_channels(signal),
                   'rate': sr,
-                  'frames_per_buffer': 1024,
                   'output': True,
                   'output_device_index': 1}
+  print(signal.shape)
   utils.play_array(signal, pyaudio_params=pyaudio_params, ignore_warning=ignore_warning)
 
 

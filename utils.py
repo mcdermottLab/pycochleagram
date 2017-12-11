@@ -246,12 +246,18 @@ def play_array(snd_array, sr=44100, rescale='normalize', pyaudio_params={}, igno
 
   out_snd_array = rescale_sound(snd_array, rescale)
 
+  # _pyaudio_params = {'format': pyaudio.paFloat32,
+  #                    'channels': 1,
+  #                    'rate': sr,
+  #                    'frames_per_buffer': 1024,
+  #                    'output': True,
+  #                    'output_device_index': 1}
   _pyaudio_params = {'format': pyaudio.paFloat32,
-                     'channels': 1,
-                     'rate': sr,
-                     'frames_per_buffer': 1024,
-                     'output': True,
-                     'output_device_index': 1}
+                   'channels': 1,
+                   'rate': sr,
+                   'frames_per_buffer': 1,  # I don't know what this does, but default of 1024 causes issues with TIMIT in py2.7
+                   'output': True,
+                   'output_device_index': 1}
 
   for k, v in pyaudio_params.items():
     _pyaudio_params[k] = v
