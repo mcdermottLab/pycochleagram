@@ -6,8 +6,8 @@ from time import sleep
 import numpy as np
 import scipy.signal
 
-from . import erbfilter as erb
-from . import subband as sb
+import erbfilter as erb
+import subband as sb
 
 # import ipdb
 

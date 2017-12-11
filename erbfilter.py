@@ -5,7 +5,7 @@ from __future__ import print_function
 import warnings
 import numpy as np
 
-from . import utils
+import utils
 
 
 def freq2erb(freq_hz):
