@@ -9,9 +9,9 @@ from time import sleep, time
 import numpy as np
 from scipy.signal import welch, decimate
 
-from . import utils
-from . import erbfilter as erb
-from . import cochleagram as cgram
+import utils
+import erbfilter as erb
+import cochleagram as cgram
 # import matplotlib.pyplot as plt
 
 if utils.check_if_display_exists():
