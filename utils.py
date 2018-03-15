@@ -86,14 +86,14 @@ def combine_signal_and_noise(signal, noise, snr):
   """
   # normalize the signal
   signal = signal / rms(signal)
-  sf = np.power(10, snr / 10)
+  sf = np.power(10, snr / 20)
   signal_rms = rms(signal)
   noise = noise * ((signal_rms / rms(noise)) / sf)
   signal_and_noise = signal + noise
   return signal_and_noise
 
 
-def rms(a):
+def rms(a, strict=True):
   """Compute root mean squared of array.
 
   Args:
@@ -103,11 +103,15 @@ def rms(a):
     array:
       **rms_a**: Root mean squared of array.
   """
-  return np.sqrt(np.mean(a * a))
+  out = np.sqrt(np.mean(a * a))
+  if strict and np.isnan(out):
+    raise ValueError('rms calculation resulted in a nan: this will affect' +
+                     'later computation. Ignore with `strict`=False')
+  return out
 
 
 ##### Display and Playback Methods #####
-def cochshow(cochleagram, interact=True, cmap='inferno'):
+def cochshow(cochleagram, interact=True, cmap='magma'):
   """Helper function to facilitate displaying cochleagrams.
 
   Args:
