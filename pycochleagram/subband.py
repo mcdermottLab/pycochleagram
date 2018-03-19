@@ -5,7 +5,7 @@ from __future__ import print_function
 import warnings
 import numpy as np
 
-import utils
+from pycochleagram import utils
 
 
 def reshape_signal_canonical(signal):

@@ -1,3 +1,17 @@
+
+# TODO:
+# + convert docstrings to np format
+# + build and format docs
+# + put docs on github
+# + test padding (pad_factor)
+# + sensible parameters for downsampling?
+# + clean up old and deprecated methods
+# + write readme
+# + python compatibility issues
+# + erb filters fails with certain arguments:
+# `N: 680, sample_factor: 15, signal_length: 2433, sr: 32593, low_lim: 147, hi_lim: 16296, pad_factor: None`
+
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -6,10 +20,11 @@ from time import sleep
 import numpy as np
 import scipy.signal
 
-import erbfilter as erb
-import subband as sb
+from pycochleagram import erbfilter as erb
+from pycochleagram import subband as sb
+import matplotlib.pyplot as plt
 
-# import ipdb
+import pdb as ipdb
 
 
 def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
@@ -110,12 +125,26 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
     erb_kwargs = {'no_highpass': True, 'no_lowpass': True}
   else:
     erb_kwargs = {}
-  print(erb_kwargs)
+  # print(erb_kwargs)
   filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(batch_signal.shape[1],
       sr, n, low_lim, hi_lim, sample_factor, pad_factor=pad_factor,
       full_filter=True, strict=strict, **erb_kwargs)
 
   # utils.filtshow(freqs, filts, hz_cutoffs, use_log_x=True)
+
+  freqs_to_plot = np.log10(freqs)
+
+  # print(filts.shape)
+  # plt.figure(figsize=(18,5))
+  # # plt.plot(freqs_to_plot, filts[:,3:11], 'k')
+  # plt.plot(freqs_to_plot, filts[:,5:13], 'k', linewidth=2)
+  # plt.xlim([2, 3.5])
+  # plt.ylim([0, None])
+  # plt.title('%s @ %s' % (n, sample_factor))
+  # wfn = '/om/user/raygon/projects/deepFerret/src/dflearn/COSYNE18_diagPlots/filters_%s_%s.pdf' % (n, sample_factor)
+  # plt.savefig(wfn)
+  # plt.show()
+  # ipdb.set_trace()
 
   is_batch = batch_signal.shape[0] > 1
   for i in range(batch_signal.shape[0]):

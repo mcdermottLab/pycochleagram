@@ -9,9 +9,10 @@ from time import sleep, time
 import numpy as np
 from scipy.signal import welch, decimate
 
-import utils
-import erbfilter as erb
-import cochleagram as cgram
+from pycochleagram import cochleagram as cgram
+from pycochleagram import erbfilter as erb
+from pycochleagram import utils
+
 # import matplotlib.pyplot as plt
 
 if utils.check_if_display_exists():
@@ -318,9 +319,10 @@ def main(ignore_playback_warning=False, mode='rand_sound'):
     None
   """
   mode = mode.lower()
-  DEMO_PATH = 'demo_stim'
+  DEMO_PATH = '/Users/raygon/Desktop/mdLab/projects/public/pycochleagram/pycochleagram/demo_stim/'
   if mode == 'rand_sound':
     rfn = choice([os.path.join(DEMO_PATH, f)for f in os.listdir(DEMO_PATH) if f.endswith('.wav')])
+    print(os.listdir(DEMO_PATH))
     # rfn = [os.path.join(DEMO_PATH, f)for f in os.listdir(DEMO_PATH)][1]
     print('Running demo with sound file: %s ' % rfn)
     demo_stim, demo_sr = utils.wav_to_array(rfn)

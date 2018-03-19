@@ -95,6 +95,7 @@ def combine_signal_and_noise(signal, noise, snr):
 
 def rms(a, strict=True):
   """Compute root mean squared of array.
+  WARNING: THIS BREAKS WITH AXIS, only works on vector input.
 
   Args:
     a (array): Input array.
