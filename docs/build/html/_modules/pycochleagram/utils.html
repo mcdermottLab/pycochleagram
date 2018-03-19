@@ -1,0 +1,839 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>pycochleagram.utils &mdash; pycochleagram  documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="../../_static/cochleagramIcon.png"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+        <link rel="search" title="Search" href="../../search.html"/>
+    <link rel="top" title="pycochleagram  documentation" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> pycochleagram
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../readmeLink.html">pycochleagram readme</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pycochleagram.html">pycochleagram package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pycochleagram</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>pycochleagram.utils</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for pycochleagram.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">scipy.io</span> <span class="k">import</span> <span class="n">wavfile</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+
+<div class="viewcode-block" id="check_if_display_exists"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.check_if_display_exists">[docs]</a><span class="k">def</span> <span class="nf">check_if_display_exists</span><span class="p">():</span>
+  <span class="sd">&quot;&quot;&quot;Check if a display is present on the machine. This can be used</span>
+<span class="sd">  to conditionally import matplotlib, as importing it with an interactive</span>
+<span class="sd">  backend on a machine without a display causes a core dump.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    (bool): Indicates if there is a display present on the machine.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">havedisplay</span> <span class="o">=</span> <span class="s1">&#39;DISPLAY&#39;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">havedisplay</span><span class="p">:</span>
+    <span class="n">exitval</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s2">&quot;python -c &#39;import matplotlib.pyplot as plt; plt.figure()&#39;&quot;</span><span class="p">)</span>
+    <span class="n">havedisplay</span> <span class="o">=</span> <span class="p">(</span><span class="n">exitval</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">havedisplay</span></div>
+
+
+<span class="k">if</span> <span class="n">check_if_display_exists</span><span class="p">():</span>
+  <span class="kn">from</span> <span class="nn">matplotlib.pyplot</span> <span class="k">import</span> <span class="n">imshow</span><span class="p">,</span> <span class="n">show</span><span class="p">,</span> <span class="n">plot</span>
+<span class="k">else</span><span class="p">:</span>
+  <span class="kn">import</span> <span class="nn">matplotlib</span>
+  <span class="n">matplotlib</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;Agg&#39;</span><span class="p">)</span>
+  <span class="kn">from</span> <span class="nn">matplotlib.pyplot</span> <span class="k">import</span> <span class="n">imshow</span><span class="p">,</span> <span class="n">show</span><span class="p">,</span> <span class="n">plot</span>
+  <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;pycochleagram using non-interactive Agg matplotlib backend&#39;</span><span class="p">,</span> <span class="ne">RuntimeWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+
+<span class="c1">##### Public Helper Methods #####</span>
+<div class="viewcode-block" id="compute_cochleagram_shape"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.compute_cochleagram_shape">[docs]</a><span class="k">def</span> <span class="nf">compute_cochleagram_shape</span><span class="p">(</span><span class="n">signal_len</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">sample_factor</span><span class="p">,</span> <span class="n">env_sr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Returns the shape of the cochleagram that will be created from</span>
+<span class="sd">  by using the provided parameters.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    signal_len (int): Length of signal waveform.</span>
+<span class="sd">    sr (int): Waveform sampling rate.</span>
+<span class="sd">    n (int): Number of filters requested in the filter bank.</span>
+<span class="sd">    sample_factor (int): Degree of overcompleteness of the filter bank.</span>
+<span class="sd">    env_sr (int, optional): Envelope sampling rate, if None (default),</span>
+<span class="sd">      will equal the waveform sampling rate `sr`.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    tuple: Shape of the array containing the cochleagram.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">env_sr</span> <span class="o">=</span> <span class="n">sr</span> <span class="k">if</span> <span class="n">env_sr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">env_sr</span>
+  <span class="n">n_freqs</span> <span class="o">=</span> <span class="n">sample_factor</span> <span class="o">*</span> <span class="p">(</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">sample_factor</span>
+  <span class="n">n_time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="n">env_sr</span> <span class="o">/</span> <span class="n">sr</span><span class="p">)</span> <span class="o">*</span> <span class="n">signal_len</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+  <span class="k">return</span> <span class="p">(</span><span class="n">n_freqs</span><span class="p">,</span> <span class="n">n_time</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="matlab_arange"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.matlab_arange">[docs]</a><span class="k">def</span> <span class="nf">matlab_arange</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Mimics MATLAB&#39;s sequence generation.</span>
+
+<span class="sd">  Returns `num + 1` evenly spaced samples, calculated over the interval</span>
+<span class="sd">  [`start`, `stop`].</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    start (scalar): The starting value of the sequence.</span>
+<span class="sd">    stop (scalar): The end value of the sequence.</span>
+<span class="sd">    num (int): Number of samples to generate.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    ndarray:</span>
+<span class="sd">    **samples**: There are `num + 1` equally spaced samples in the closed</span>
+<span class="sd">    interval.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">num</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="combine_signal_and_noise"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.combine_signal_and_noise">[docs]</a><span class="k">def</span> <span class="nf">combine_signal_and_noise</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">noise</span><span class="p">,</span> <span class="n">snr</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Combine the signal and noise at the provided snr.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    signal (array-like): Signal waveform data.</span>
+<span class="sd">    noise (array-like): Noise waveform data.</span>
+<span class="sd">    snr (number): SNR level in dB.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    **signal_and_noise**: Combined signal and noise waveform.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># normalize the signal</span>
+  <span class="n">signal</span> <span class="o">=</span> <span class="n">signal</span> <span class="o">/</span> <span class="n">rms</span><span class="p">(</span><span class="n">signal</span><span class="p">)</span>
+  <span class="n">sf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">snr</span> <span class="o">/</span> <span class="mi">20</span><span class="p">)</span>
+  <span class="n">signal_rms</span> <span class="o">=</span> <span class="n">rms</span><span class="p">(</span><span class="n">signal</span><span class="p">)</span>
+  <span class="n">noise</span> <span class="o">=</span> <span class="n">noise</span> <span class="o">*</span> <span class="p">((</span><span class="n">signal_rms</span> <span class="o">/</span> <span class="n">rms</span><span class="p">(</span><span class="n">noise</span><span class="p">))</span> <span class="o">/</span> <span class="n">sf</span><span class="p">)</span>
+  <span class="n">signal_and_noise</span> <span class="o">=</span> <span class="n">signal</span> <span class="o">+</span> <span class="n">noise</span>
+  <span class="k">return</span> <span class="n">signal_and_noise</span></div>
+
+
+<div class="viewcode-block" id="rms"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.rms">[docs]</a><span class="k">def</span> <span class="nf">rms</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Compute root mean squared of array.</span>
+<span class="sd">  WARNING: THIS BREAKS WITH AXIS, only works on vector input.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    a (array): Input array.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">      **rms_a**: Root mean squared of array.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">a</span><span class="p">))</span>
+  <span class="k">if</span> <span class="n">strict</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">out</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;rms calculation resulted in a nan: this will affect&#39;</span> <span class="o">+</span>
+                     <span class="s1">&#39;later computation. Ignore with `strict`=False&#39;</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">out</span></div>
+
+
+<span class="c1">##### Display and Playback Methods #####</span>
+<div class="viewcode-block" id="cochshow"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.cochshow">[docs]</a><span class="k">def</span> <span class="nf">cochshow</span><span class="p">(</span><span class="n">cochleagram</span><span class="p">,</span> <span class="n">interact</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;magma&#39;</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Helper function to facilitate displaying cochleagrams.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    cochleagram (array): Cochleagram to display with matplotlib.</span>
+<span class="sd">    interact (bool, optional): Determines if interactive plot should be shown.</span>
+<span class="sd">      If True (default), plot will be shown. If this is False, the figure will</span>
+<span class="sd">      be created but not displayed.</span>
+<span class="sd">    cmap (str, optional): A matplotlib cmap name to use for this plot.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    AxesImage:</span>
+<span class="sd">    **image**: Whatever matplotlib.pyplot.plt returns.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">f</span> <span class="o">=</span> <span class="n">imshow</span><span class="p">(</span><span class="n">cochleagram</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="s1">&#39;lower&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">interact</span><span class="p">:</span>
+    <span class="n">show</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">f</span></div>
+
+
+<div class="viewcode-block" id="filtshow"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.filtshow">[docs]</a><span class="k">def</span> <span class="nf">filtshow</span><span class="p">(</span><span class="n">freqs</span><span class="p">,</span> <span class="n">filts</span><span class="p">,</span> <span class="n">hz_cutoffs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">full_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_log_x</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">interact</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+  <span class="n">filts_to_plot</span> <span class="o">=</span> <span class="n">filts</span> <span class="k">if</span> <span class="n">full_filter</span> <span class="ow">is</span> <span class="kc">False</span> <span class="k">else</span> <span class="n">filts</span><span class="p">[:,</span> <span class="p">:</span><span class="n">filts</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># positive filters</span>
+  <span class="c1"># filts_to_plot = filts if full_filter is False else filts[:, filts.shape[1]/2-1:]</span>
+  <span class="n">freqs_to_plot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span> <span class="k">if</span> <span class="n">use_log_x</span> <span class="k">else</span> <span class="n">freqs</span>
+
+  <span class="nb">print</span><span class="p">(</span><span class="n">filts_to_plot</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+  <span class="n">f</span> <span class="o">=</span> <span class="n">plot</span><span class="p">(</span><span class="n">freqs_to_plot</span><span class="p">,</span> <span class="n">filts_to_plot</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">hz_cutoffs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">hz_cutoffs_to_plot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">hz_cutoffs</span><span class="p">)</span> <span class="k">if</span> <span class="n">use_log_x</span> <span class="k">else</span> <span class="n">hz_cutoffs</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">plot</span><span class="p">(</span><span class="n">hz_cutoffs_to_plot</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">hz_cutoffs</span><span class="p">)</span><span class="o">+</span><span class="n">filts_to_plot</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">interact</span><span class="p">:</span>
+    <span class="n">show</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">f</span></div>
+
+
+<div class="viewcode-block" id="get_channels"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.get_channels">[docs]</a><span class="k">def</span> <span class="nf">get_channels</span><span class="p">(</span><span class="n">snd_array</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Returns the number of channels in the sound array.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    snd_array (array): Array (of sound data).</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    int:</span>
+<span class="sd">    **n_channels**: The number of channels in the input array.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">n_channels</span> <span class="o">=</span> <span class="mi">1</span>
+  <span class="k">if</span> <span class="n">snd_array</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">n_channels</span> <span class="o">=</span> <span class="n">snd_array</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">n_channels</span></div>
+
+
+<div class="viewcode-block" id="rescale_sound"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.rescale_sound">[docs]</a><span class="k">def</span> <span class="nf">rescale_sound</span><span class="p">(</span><span class="n">snd_array</span><span class="p">,</span> <span class="n">rescale</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Rescale the sound with the provided rescaling method (if supported).</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    snd_array (array): The array containing the sound data.</span>
+<span class="sd">    rescale ({&#39;standardize&#39;, &#39;normalize&#39;, None}): Determines type of</span>
+<span class="sd">      rescaling to perform. &#39;standardize&#39; will divide by the max value</span>
+<span class="sd">      allowed by the numerical precision of the input. &#39;normalize&#39; will</span>
+<span class="sd">      rescale to the interval [-1, 1]. None will not perform rescaling (NOTE:</span>
+<span class="sd">      be careful with this as this can be *very* loud if playedback!).</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">    **rescaled_snd**: The sound array after rescaling.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">rescale</span> <span class="o">=</span> <span class="n">_parse_rescale_arg</span><span class="p">(</span><span class="n">rescale</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">rescale</span> <span class="o">==</span> <span class="s1">&#39;standardize&#39;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">snd_array</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">):</span>
+      <span class="n">snd_array</span> <span class="o">=</span> <span class="n">snd_array</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">snd_array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">)</span>  <span class="c1"># rescale so max value allowed by precision has value 1</span>
+    <span class="k">elif</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">snd_array</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">):</span>
+      <span class="n">snd_array</span> <span class="o">=</span> <span class="n">snd_array</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">snd_array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">)</span>  <span class="c1"># rescale so max value allowed by precision has value 1</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;rescale is undefined for input type: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">snd_array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="n">rescale</span> <span class="o">==</span> <span class="s1">&#39;normalize&#39;</span><span class="p">:</span>
+    <span class="n">snd_array</span> <span class="o">=</span> <span class="n">snd_array</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">snd_array</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>  <span class="c1"># rescale to [-1, 1]</span>
+  <span class="c1"># do nothing if rescale is None</span>
+  <span class="k">return</span> <span class="n">snd_array</span></div>
+
+
+<div class="viewcode-block" id="wav_to_array"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.wav_to_array">[docs]</a><span class="k">def</span> <span class="nf">wav_to_array</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">rescale</span><span class="o">=</span><span class="s1">&#39;standardize&#39;</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot; Reads wav file data into a numpy array.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      fn (str): The file path to .wav file.</span>
+<span class="sd">      rescale ({&#39;standardize&#39;, &#39;normalize&#39;, None}): Determines type of</span>
+<span class="sd">        rescaling to perform. &#39;standardize&#39; will divide by the max value</span>
+<span class="sd">        allowed by the numerical precision of the input. &#39;normalize&#39; will</span>
+<span class="sd">        rescale to the interval [-1, 1]. None will not perform rescaling (NOTE:</span>
+<span class="sd">        be careful with this as this can be *very* loud if playedback!).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      tuple:</span>
+<span class="sd">        **snd** (int): The sound in the .wav file as a numpy array.</span>
+<span class="sd">        **samp_freq** (array): Sampling frequency of the input sound.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">samp_freq</span><span class="p">,</span> <span class="n">snd</span> <span class="o">=</span> <span class="n">wavfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+  <span class="n">snd</span> <span class="o">=</span> <span class="n">rescale_sound</span><span class="p">(</span><span class="n">snd</span><span class="p">,</span> <span class="n">rescale</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">snd</span><span class="p">,</span> <span class="n">samp_freq</span></div>
+
+
+<div class="viewcode-block" id="play_array"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.play_array">[docs]</a><span class="k">def</span> <span class="nf">play_array</span><span class="p">(</span><span class="n">snd_array</span><span class="p">,</span> <span class="n">sr</span><span class="o">=</span><span class="mi">44100</span><span class="p">,</span> <span class="n">rescale</span><span class="o">=</span><span class="s1">&#39;normalize&#39;</span><span class="p">,</span> <span class="n">pyaudio_params</span><span class="o">=</span><span class="p">{},</span> <span class="n">ignore_warning</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Play the provided sound array using pyaudio.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    snd_array (array): The array containing the sound data.</span>
+<span class="sd">    sr (number): Sampling sr for playback; defaults to 44,100 Hz.</span>
+<span class="sd">    Will be overriden if `pyaudio_params` is provided.</span>
+<span class="sd">    rescale ({&#39;standardize&#39;, &#39;normalize&#39;, None}): Determines type of</span>
+<span class="sd">      rescaling to perform. &#39;standardize&#39; will divide by the max value</span>
+<span class="sd">      allowed by the numerical precision of the input. &#39;normalize&#39; will</span>
+<span class="sd">      rescale to the interval [-1, 1]. None will not perform rescaling (NOTE:</span>
+<span class="sd">      be careful with this as this can be *very* loud if playedback!).</span>
+<span class="sd">    pyaudio_params (dict): A dictionary containing any input arguments to pass</span>
+<span class="sd">      to the pyaudio.PyAudio.open method.</span>
+<span class="sd">    ignore_warning (bool, optional): Determines if audio playback will occur.</span>
+<span class="sd">      The playback volume can be very loud, so to use this method,</span>
+<span class="sd">      `ignore_warning` must be True. If this is False, an error will be</span>
+<span class="sd">      thrown warning the user about this issue.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    str:</span>
+<span class="sd">      **sound_str**: The string representation (used by pyaudio) of the sound</span>
+<span class="sd">        array.</span>
+
+<span class="sd">  Raises:</span>
+<span class="sd">    ValueError: If `ignore_warning` is False, an error is thrown to warn the</span>
+<span class="sd">      user about the possible loud sounds associated with playback</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="kn">import</span> <span class="nn">pyaudio</span>
+  <span class="k">if</span> <span class="n">ignore_warning</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;WARNING: Playback is largely untested and can result in &#39;</span><span class="o">+</span>
+        <span class="s1">&#39;VERY LOUD sounds. Use this function at your own risk. Dismiss this error &#39;</span><span class="o">+</span>
+        <span class="s1">&#39;with `ignore_warning=True`.&#39;</span><span class="p">)</span>
+
+  <span class="n">out_snd_array</span> <span class="o">=</span> <span class="n">rescale_sound</span><span class="p">(</span><span class="n">snd_array</span><span class="p">,</span> <span class="n">rescale</span><span class="p">)</span>
+
+  <span class="c1"># _pyaudio_params = {&#39;format&#39;: pyaudio.paFloat32,</span>
+  <span class="c1">#                    &#39;channels&#39;: 1,</span>
+  <span class="c1">#                    &#39;rate&#39;: sr,</span>
+  <span class="c1">#                    &#39;frames_per_buffer&#39;: 1024,</span>
+  <span class="c1">#                    &#39;output&#39;: True,</span>
+  <span class="c1">#                    &#39;output_device_index&#39;: 1}</span>
+  <span class="n">_pyaudio_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;format&#39;</span><span class="p">:</span> <span class="n">pyaudio</span><span class="o">.</span><span class="n">paFloat32</span><span class="p">,</span>
+                   <span class="s1">&#39;channels&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                   <span class="s1">&#39;rate&#39;</span><span class="p">:</span> <span class="n">sr</span><span class="p">,</span>
+                   <span class="s1">&#39;frames_per_buffer&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>  <span class="c1"># I don&#39;t know what this does, but default of 1024 causes issues with TIMIT in py2.7</span>
+                   <span class="s1">&#39;output&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                   <span class="s1">&#39;output_device_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+
+  <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pyaudio_params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">_pyaudio_params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+  <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;pyAudio Params:</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">_pyaudio_params</span><span class="p">)</span>
+  <span class="n">p</span> <span class="o">=</span> <span class="n">pyaudio</span><span class="o">.</span><span class="n">PyAudio</span><span class="p">()</span>
+  <span class="c1"># stream = p.open(format=pyaudio.paFloat32,</span>
+  <span class="c1">#                 channels=1,</span>
+  <span class="c1">#                 rate=44100,</span>
+  <span class="c1">#                 frames_per_buffer=1024,</span>
+  <span class="c1">#                 output=True,</span>
+  <span class="c1">#                 output_device_index=1)</span>
+  <span class="n">stream</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="o">**</span><span class="n">_pyaudio_params</span><span class="p">)</span>
+  <span class="n">data</span> <span class="o">=</span> <span class="n">out_snd_array</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">tostring</span><span class="p">()</span>
+
+  <span class="c1"># stream = p.open(format=pyaudio.paInt16, channels=1, rate=samp_freq, output=True, frames_per_buffer=CHUNKSIZE)</span>
+  <span class="c1"># data = snd.astype(snd.dtype).tostring()</span>
+  <span class="n">stream</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">data</span></div>
+
+
+<span class="c1">##### FFT-like Methods #####</span>
+<div class="viewcode-block" id="fft"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.fft">[docs]</a><span class="k">def</span> <span class="nf">fft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Provides support for various implementations of the FFT, using numpy&#39;s</span>
+<span class="sd">  fftpack or pyfftw&#39;s fftw. This uses a numpy.fft-like interface.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    a (array): Time-domain signal.</span>
+<span class="sd">    mode (str): Determines which FFT implementation will be used. Options are</span>
+<span class="sd">      &#39;fftw&#39;, &#39;np&#39;, and &#39;auto&#39;. Using &#39;auto&#39;, will attempt to use a pyfftw</span>
+<span class="sd">      implementation with some sensible parameters (if the module is</span>
+<span class="sd">      available), and will use numpy&#39;s fftpack implementation otherwise.</span>
+<span class="sd">    n (int, optional): Length of the transformed axis of the output. If n is</span>
+<span class="sd">      smaller than the length of the input, the input is cropped. If it is</span>
+<span class="sd">      larger, the input is padded with zeros. If n is not given, the length of</span>
+<span class="sd">      the input along the axis specified by axis is used.</span>
+<span class="sd">    axis (int, optional): Axis over which to compute the FFT. If not given, the</span>
+<span class="sd">      last axis is used.</span>
+<span class="sd">    norm ({None, &#39;ortho&#39;}, optional): Support for numpy interface.</span>
+<span class="sd">    params (dict, None, optional): Dictionary of additional input arguments to</span>
+<span class="sd">      provide to the appropriate fft function (usually fftw). Note, named</span>
+<span class="sd">      arguments (e.g., `n`, `axis`, and `norm`) will override identically named</span>
+<span class="sd">      arguments in `params`. If `mode` is &#39;auto&#39; and `params` dict is None,</span>
+<span class="sd">      sensible values will be chosen. If `params` is not None, it will not be</span>
+<span class="sd">      altered.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">      **fft_a**: Signal in the frequency domain in FFT standard order. See numpy.fft() for</span>
+<span class="sd">      a description of the output.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># handle &#39;auto&#39; mode</span>
+  <span class="n">mode</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="n">_parse_fft_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+  <span class="c1"># named args override params</span>
+  <span class="n">d1</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="n">n</span><span class="p">,</span> <span class="s1">&#39;axis&#39;</span><span class="p">:</span> <span class="n">axis</span><span class="p">,</span> <span class="s1">&#39;norm&#39;</span><span class="p">:</span> <span class="n">norm</span><span class="p">}</span>
+  <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;fftw&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pyfftw</span>
+    <span class="k">return</span> <span class="n">pyfftw</span><span class="o">.</span><span class="n">interfaces</span><span class="o">.</span><span class="n">numpy_fft</span><span class="o">.</span><span class="n">fft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;np&#39;</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;`fft method is not defined for mode `</span><span class="si">%s</span><span class="s1">`;&#39;</span> <span class="o">+</span>
+                              <span class="s1">&#39;use &quot;auto&quot;, &quot;np&quot; or &quot;fftw&quot;.&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ifft"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.ifft">[docs]</a><span class="k">def</span> <span class="nf">ifft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Provides support for various implementations of the IFFT, using numpy&#39;s</span>
+<span class="sd">  fftpack or pyfftw&#39;s fftw. This uses a numpy.fft-like interface.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    a (array): Time-domain signal.</span>
+<span class="sd">    mode (str): Determines which IFFT implementation will be used. Options are</span>
+<span class="sd">      &#39;fftw&#39;, &#39;np&#39;, and &#39;auto&#39;. Using &#39;auto&#39;, will attempt to use a pyfftw</span>
+<span class="sd">      implementation with some sensible parameters (if the module is</span>
+<span class="sd">      available), and will use numpy&#39;s fftpack implementation otherwise.</span>
+<span class="sd">    n (int, optional): Length of the transformed axis of the output. If n is</span>
+<span class="sd">      smaller than the length of the input, the input is cropped. If it is</span>
+<span class="sd">      larger, the input is padded with zeros. If n is not given, the length of</span>
+<span class="sd">      the input along the axis specified by axis is used.</span>
+<span class="sd">    axis (int, optional): Axis over which to compute the FFT. If not given, the</span>
+<span class="sd">      last axis is used.</span>
+<span class="sd">    norm ({None, &#39;ortho&#39;}, optional): Support for numpy interface.</span>
+<span class="sd">    params (dict, None, optional): Dictionary of additional input arguments to</span>
+<span class="sd">      provide to the appropriate fft function (usually fftw). Note, named</span>
+<span class="sd">      arguments (e.g., `n`, `axis`, and `norm`) will override identically named</span>
+<span class="sd">      arguments in `params`. If `mode` is &#39;auto&#39; and `params` dict is None,</span>
+<span class="sd">      sensible values will be chosen. If `params` is not None, it will not be</span>
+<span class="sd">      altered.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">    **ifft_a**: Signal in the time domain. See numpy.ifft() for a</span>
+<span class="sd">      description of the output.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># handle &#39;auto&#39; mode</span>
+  <span class="n">mode</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="n">_parse_fft_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+  <span class="c1"># named args override params</span>
+  <span class="n">d1</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="n">n</span><span class="p">,</span> <span class="s1">&#39;axis&#39;</span><span class="p">:</span> <span class="n">axis</span><span class="p">,</span> <span class="s1">&#39;norm&#39;</span><span class="p">:</span> <span class="n">norm</span><span class="p">}</span>
+  <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;fftw&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pyfftw</span>
+    <span class="k">return</span> <span class="n">pyfftw</span><span class="o">.</span><span class="n">interfaces</span><span class="o">.</span><span class="n">numpy_fft</span><span class="o">.</span><span class="n">ifft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;np&#39;</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;`ifft method is not defined for mode `</span><span class="si">%s</span><span class="s1">`;&#39;</span> <span class="o">+</span>
+                              <span class="s1">&#39;use &quot;np&quot; or &quot;fftw&quot;.&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="rfft"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.rfft">[docs]</a><span class="k">def</span> <span class="nf">rfft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Provides support for various implementations of the RFFT, using numpy&#39;s</span>
+<span class="sd">  fftpack or pyfftw&#39;s fftw. This uses a numpy.fft-like interface.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    a (array): Time-domain signal.</span>
+<span class="sd">    mode (str): Determines which FFT implementation will be used. Options are</span>
+<span class="sd">      &#39;fftw&#39;, &#39;np&#39;, and &#39;auto&#39;. Using &#39;auto&#39;, will attempt to use a pyfftw</span>
+<span class="sd">      implementation with some sensible parameters (if the module is</span>
+<span class="sd">      available), and will use numpy&#39;s fftpack implementation otherwise.</span>
+<span class="sd">    n (int, optional): Length of the transformed axis of the output. If n is</span>
+<span class="sd">      smaller than the length of the input, the input is cropped. If it is</span>
+<span class="sd">      larger, the input is padded with zeros. If n is not given, the length of</span>
+<span class="sd">      the input along the axis specified by axis is used.</span>
+<span class="sd">    axis (int, optional): Axis over which to compute the FFT. If not given, the</span>
+<span class="sd">      last axis is used.</span>
+<span class="sd">    params (dict, None, optional): Dictionary of additional input arguments to</span>
+<span class="sd">      provide to the appropriate fft function (usually fftw). Note, named</span>
+<span class="sd">      arguments (e.g., `n` and `axis`) will override identically named</span>
+<span class="sd">      arguments in `params`. If `mode` is &#39;auto&#39; and `params` dict is None,</span>
+<span class="sd">      sensible values will be chosen. If `params` is not None, it will not be</span>
+<span class="sd">      altered.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">    **rfft_a**: Signal in the frequency domain in standard order.</span>
+<span class="sd">      See numpy.rfft() for a description of the output.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># handle &#39;auto&#39; mode</span>
+  <span class="n">mode</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="n">_parse_fft_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+  <span class="c1"># named args override params</span>
+  <span class="n">d1</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="n">n</span><span class="p">,</span> <span class="s1">&#39;axis&#39;</span><span class="p">:</span> <span class="n">axis</span><span class="p">}</span>
+  <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;fftw&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pyfftw</span>
+    <span class="k">return</span> <span class="n">pyfftw</span><span class="o">.</span><span class="n">interfaces</span><span class="o">.</span><span class="n">numpy_fft</span><span class="o">.</span><span class="n">rfft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;np&#39;</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;`rfft method is not defined for mode `</span><span class="si">%s</span><span class="s1">`;&#39;</span> <span class="o">+</span>
+                              <span class="s1">&#39;use &quot;np&quot; or &quot;fftw&quot;.&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="irfft"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.irfft">[docs]</a><span class="k">def</span> <span class="nf">irfft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Provides support for various implementations of the IRFFT, using numpy&#39;s</span>
+<span class="sd">  fftpack or pyfftw&#39;s fftw. This uses a numpy.fft-like interface.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    a (array): Time-domain signal.</span>
+<span class="sd">    mode (str): Determines which FFT implementation will be used. Options are</span>
+<span class="sd">      &#39;fftw&#39;, &#39;np&#39;, and &#39;auto&#39;. Using &#39;auto&#39;, will attempt to use a pyfftw</span>
+<span class="sd">      implementation with some sensible parameters (if the module is</span>
+<span class="sd">      available), and will use numpy&#39;s fftpack implementation otherwise.</span>
+<span class="sd">    n (int, optional): Length of the transformed axis of the output. If n is</span>
+<span class="sd">      smaller than the length of the input, the input is cropped. If it is</span>
+<span class="sd">      larger, the input is padded with zeros. If n is not given, the length of</span>
+<span class="sd">      the input along the axis specified by axis is used.</span>
+<span class="sd">    axis (int, optional): Axis over which to compute the FFT. If not given, the</span>
+<span class="sd">      last axis is used.</span>
+<span class="sd">    params (dict, None, optional): Dictionary of additional input arguments to</span>
+<span class="sd">      provide to the appropriate fft function (usually fftw). Note, named</span>
+<span class="sd">      arguments (e.g., `n` and `axis`) will override identically named</span>
+<span class="sd">      arguments in `params`. If `mode` is &#39;auto&#39; and `params` dict is None,</span>
+<span class="sd">      sensible values will be chosen. If `params` is not None, it will not be</span>
+<span class="sd">      altered.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">    **irfft_a**: Signal in the time domain. See numpy.irfft() for a</span>
+<span class="sd">      description of the output.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># handle &#39;auto&#39; mode</span>
+  <span class="n">mode</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="n">_parse_fft_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+  <span class="c1"># named args override params</span>
+  <span class="c1"># d1 = {&#39;n&#39;: n, &#39;axis&#39;: axis, &#39;norm&#39;: norm}</span>
+  <span class="n">d1</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="n">n</span><span class="p">,</span> <span class="s1">&#39;axis&#39;</span><span class="p">:</span> <span class="n">axis</span><span class="p">}</span>
+  <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;fftw&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pyfftw</span>
+    <span class="k">return</span> <span class="n">pyfftw</span><span class="o">.</span><span class="n">interfaces</span><span class="o">.</span><span class="n">numpy_fft</span><span class="o">.</span><span class="n">irfft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;np&#39;</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">irfft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;`irfft method is not defined for mode `</span><span class="si">%s</span><span class="s1">`;&#39;</span> <span class="o">+</span>
+                              <span class="s1">&#39;use &quot;np&quot; or &quot;fftw&quot;.&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="hilbert"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.hilbert">[docs]</a><span class="k">def</span> <span class="nf">hilbert</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">fft_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Compute the Hilbert transform of time-domain signal.</span>
+
+<span class="sd">  Provides access to FFTW-based implementation of the Hilbert transform.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    a (array): Time-domain signal.</span>
+<span class="sd">    mode (str): Determines which FFT implementation will be used. Options are</span>
+<span class="sd">      &#39;fftw&#39;, &#39;np&#39;, and &#39;auto&#39;. Using &#39;auto&#39;, will attempt to use a pyfftw</span>
+<span class="sd">      implementation with some sensible parameters (if the module is</span>
+<span class="sd">      available), and will use numpy&#39;s fftpack implementation otherwise.</span>
+<span class="sd">    fft_params (dict, None, optional): Dictionary of input arguments to provide to</span>
+<span class="sd">      the call computing fft  and ifft. If `mode` is &#39;auto&#39; and params dict is None,</span>
+<span class="sd">      sensible values will be chosen. If `fft_params` is not None, it will not</span>
+<span class="sd">      be altered.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">    **hilbert_a**: Hilbert transform of input array `a`, in the time domain.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">axis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+  <span class="n">N</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+  <span class="k">if</span> <span class="n">N</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;N must be positive.&quot;</span><span class="p">)</span>
+
+  <span class="c1"># convert to frequency space</span>
+  <span class="n">a</span> <span class="o">=</span> <span class="n">fft</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">fft_params</span><span class="p">)</span>
+
+  <span class="c1"># perform the hilbert transform in the frequency domain</span>
+  <span class="c1"># algorithm from scipy.signal.hilbert</span>
+  <span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>  <span class="c1"># don&#39;t modify the input array</span>
+  <span class="c1"># create hilbert multiplier</span>
+  <span class="k">if</span> <span class="n">N</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">h</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="n">N</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">h</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">N</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">h</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">h</span><span class="p">[</span><span class="mi">1</span><span class="p">:(</span><span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+  <span class="n">ah</span> <span class="o">=</span> <span class="n">a</span> <span class="o">*</span> <span class="n">h</span>  <span class="c1"># apply hilbert transform</span>
+
+  <span class="k">return</span> <span class="n">ifft</span><span class="p">(</span><span class="n">ah</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">fft_params</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="fhilbert"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.utils.fhilbert">[docs]</a><span class="k">def</span> <span class="nf">fhilbert</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">ifft_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Compute the Hilbert transform of the provided frequency-space signal.</span>
+
+<span class="sd">  This function assumes the input array is already in frequency space, i.e.,</span>
+<span class="sd">  it is the output of a numpy-like FFT implementation. This avoids unnecessary</span>
+<span class="sd">  repeated computation of the FFT/IFFT.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    a (array): Signal, in frequency space, e.g., a = fft(signal).</span>
+<span class="sd">    mode (str): Determines which FFT implementation will be used. Options are</span>
+<span class="sd">      &#39;fftw&#39;, &#39;np&#39;, and &#39;auto&#39;. Using &#39;auto&#39;, will attempt to use a pyfftw</span>
+<span class="sd">      implementation with some sensible parameters (if the module is</span>
+<span class="sd">      available), and will use numpy&#39;s fftpack implementation otherwise.</span>
+<span class="sd">    iff_params (dict, None, optional): Dictionary of input arguments to provide to</span>
+<span class="sd">      the call computing ifft. If `mode` is &#39;auto&#39; and params dict is None,</span>
+<span class="sd">      sensible values will be chosen. If `ifft_params` is not None, it will not</span>
+<span class="sd">      be altered.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">    **hilbert_a**: Hilbert transform of input array `a`, in the time domain.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">axis</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">axis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+  <span class="n">N</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+  <span class="k">if</span> <span class="n">N</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;N must be positive.&quot;</span><span class="p">)</span>
+
+  <span class="c1"># perform the hilbert transform in the frequency domain</span>
+  <span class="c1"># algorithm from scipy.signal.hilbert</span>
+  <span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>  <span class="c1"># don&#39;t modify the input array</span>
+  <span class="c1"># create hilbert multiplier</span>
+  <span class="k">if</span> <span class="n">N</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">h</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="n">N</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">h</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">N</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">h</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">h</span><span class="p">[</span><span class="mi">1</span><span class="p">:(</span><span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+  <span class="n">ah</span> <span class="o">=</span> <span class="n">a</span> <span class="o">*</span> <span class="n">h</span>  <span class="c1"># apply hilbert transform</span>
+
+  <span class="k">return</span> <span class="n">ifft</span><span class="p">(</span><span class="n">ah</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">ifft_params</span><span class="p">)</span></div>
+
+
+<span class="c1">##### Internal (Private) Helper Methods #####</span>
+<span class="k">def</span> <span class="nf">_parse_fft_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Prepare mode and params arguments provided by user for use with</span>
+<span class="sd">  utils.fft, utils.ifft, etc.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    mode (str): Determines which FFT implementation will be used. Options are</span>
+<span class="sd">      &#39;fftw&#39;, &#39;np&#39;, and &#39;auto&#39;. Using &#39;auto&#39;, will attempt to use a pyfftw</span>
+<span class="sd">      implementation with some sensible parameters (if the module is</span>
+<span class="sd">      available), and will use numpy&#39;s fftpack implementation otherwise.</span>
+<span class="sd">    params (dict, None): Dictionary of input arguments to provide to the</span>
+<span class="sd">      appropriate fft function. If `mode` is &#39;auto&#39; and params dict is None,</span>
+<span class="sd">      sensible values will be chosen. If `params` is not None, it will not be</span>
+<span class="sd">      altered.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    tuple:</span>
+<span class="sd">      **out_mode** (str): The mode determining the fft implementation to use; either</span>
+<span class="sd">        &#39;np&#39; or &#39;fftw&#39;.</span>
+<span class="sd">      **out_params** (dict): A dictionary containing input arguments to the</span>
+<span class="sd">        fft function.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">mode</span> <span class="o">==</span> <span class="n">mode</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="kn">import</span> <span class="nn">pyfftw</span>
+      <span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;fftw&#39;</span>
+      <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;planner_effort&#39;</span><span class="p">:</span> <span class="s1">&#39;FFTW_ESTIMATE&#39;</span><span class="p">}</span>  <span class="c1"># FFTW_ESTIMATE seems fast</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+      <span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;np&#39;</span>
+      <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+  <span class="k">return</span> <span class="n">mode</span><span class="p">,</span> <span class="n">params</span>
+
+
+<span class="k">def</span> <span class="nf">_parse_rescale_arg</span><span class="p">(</span><span class="n">rescale</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Parse the rescaling argument to a standard form.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    rescale ({&#39;normalize&#39;, &#39;standardize&#39;, None}): Determines how rescaling</span>
+<span class="sd">      will be performed.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    (str or None): A valid rescaling argument, for use with wav_to_array or</span>
+<span class="sd">      similar.</span>
+
+<span class="sd">  Raises:</span>
+<span class="sd">    ValueError: Throws an error if rescale value is unrecognized.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">rescale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">rescale</span> <span class="o">=</span> <span class="n">rescale</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">rescale</span> <span class="o">==</span> <span class="s1">&#39;normalize&#39;</span><span class="p">:</span>
+    <span class="n">out_rescale</span> <span class="o">=</span> <span class="s1">&#39;normalize&#39;</span>
+  <span class="k">elif</span> <span class="n">rescale</span> <span class="o">==</span> <span class="s1">&#39;standardize&#39;</span><span class="p">:</span>
+    <span class="n">out_rescale</span> <span class="o">=</span> <span class="s1">&#39;standardize&#39;</span>
+  <span class="k">elif</span> <span class="n">rescale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">out_rescale</span> <span class="o">=</span> <span class="kc">None</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unrecognized rescale value: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">rescale</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">out_rescale</span>
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Ray Gonzalez.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

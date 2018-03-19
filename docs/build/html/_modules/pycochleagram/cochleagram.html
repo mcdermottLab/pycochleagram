@@ -1,0 +1,793 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>pycochleagram.cochleagram &mdash; pycochleagram  documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="../../_static/cochleagramIcon.png"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+        <link rel="search" title="Search" href="../../search.html"/>
+    <link rel="top" title="pycochleagram  documentation" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> pycochleagram
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../readmeLink.html">pycochleagram readme</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pycochleagram.html">pycochleagram package</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pycochleagram</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>pycochleagram.cochleagram</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for pycochleagram.cochleagram</h1><div class="highlight"><pre>
+<span></span>
+<span class="c1"># TODO:</span>
+<span class="c1"># + convert docstrings to np format</span>
+<span class="c1"># + build and format docs</span>
+<span class="c1"># + put docs on github</span>
+<span class="c1"># + test padding (pad_factor)</span>
+<span class="c1"># + sensible parameters for downsampling?</span>
+<span class="c1"># + clean up old and deprecated methods</span>
+<span class="c1"># + write readme</span>
+<span class="c1"># + python compatibility issues</span>
+<span class="c1"># + erb filters fails with certain arguments:</span>
+<span class="c1"># `N: 680, sample_factor: 15, signal_length: 2433, sr: 32593, low_lim: 147, hi_lim: 16296, pad_factor: None`</span>
+
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+
+<span class="kn">from</span> <span class="nn">time</span> <span class="k">import</span> <span class="n">sleep</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.signal</span>
+
+<span class="kn">from</span> <span class="nn">pycochleagram</span> <span class="k">import</span> <span class="n">erbfilter</span> <span class="k">as</span> <span class="n">erb</span>
+<span class="kn">from</span> <span class="nn">pycochleagram</span> <span class="k">import</span> <span class="n">subband</span> <span class="k">as</span> <span class="n">sb</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="kn">import</span> <span class="nn">pdb</span> <span class="k">as</span> <span class="nn">ipdb</span>
+
+
+<div class="viewcode-block" id="cochleagram"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.cochleagram.cochleagram">[docs]</a><span class="k">def</span> <span class="nf">cochleagram</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">low_lim</span><span class="p">,</span> <span class="n">hi_lim</span><span class="p">,</span> <span class="n">sample_factor</span><span class="p">,</span>
+        <span class="n">pad_factor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">downsample</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">fft_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">ret_mode</span><span class="o">=</span><span class="s1">&#39;envs&#39;</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Generate the subband envelopes (i.e., the cochleagram)</span>
+<span class="sd">  of the provided signal.</span>
+
+<span class="sd">  This first creates a an ERB filterbank with the provided input arguments for</span>
+<span class="sd">  the provided signal. This filterbank is then used to perform the subband</span>
+<span class="sd">  decomposition to create the subband envelopes. The resulting envelopes can be</span>
+<span class="sd">  optionally downsampled and then modified with a nonlinearity.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    signal (array): The sound signal (waveform) in the time domain. Should be</span>
+<span class="sd">      flattened, i.e., the shape is (n_samples,).</span>
+<span class="sd">    sr (int): Sampling rate associated with the signal waveform.</span>
+<span class="sd">    n (int): Number of filters (subbands) to be generated with standard</span>
+<span class="sd">      sampling (i.e., using a sampling factor of 1). Note, the actual number of</span>
+<span class="sd">      filters in the generated filterbank depends on the sampling factor, and</span>
+<span class="sd">      will also include lowpass and highpass filters that allow for</span>
+<span class="sd">      perfect reconstruction of the input signal (the exact number of lowpass</span>
+<span class="sd">      and highpass filters is determined by the sampling factor).</span>
+<span class="sd">    low_lim (int): Lower limit of frequency range. Filters will not be defined</span>
+<span class="sd">      below this limit.</span>
+<span class="sd">    hi_lim (int): Upper limit of frequency range. Filters will not be defined</span>
+<span class="sd">      above this limit.</span>
+<span class="sd">    sample_factor (int): Positive integer that determines how densely ERB function</span>
+<span class="sd">     will be sampled to create bandpass filters. 1 represents standard sampling;</span>
+<span class="sd">     adjacent bandpass filters will overlap by 50%. 2 represents 2x overcomplete sampling;</span>
+<span class="sd">     adjacent bandpass filters will overlap by 75%. 4 represents 4x overcomplete sampling;</span>
+<span class="sd">     adjacent bandpass filters will overlap by 87.5%.</span>
+<span class="sd">    pad_factor (int, optional): If None (default), the signal will not be padded</span>
+<span class="sd">      before filtering. Otherwise, the filters will be created assuming the</span>
+<span class="sd">      waveform signal will be padded to length pad_factor*signal_length.</span>
+<span class="sd">    downsample (None, int, callable, optional): The `downsample` argument can</span>
+<span class="sd">      be an integer representing the upsampling factor in polyphase resampling</span>
+<span class="sd">      (with `sr` as the downsampling factor), a callable</span>
+<span class="sd">      (to perform custom downsampling), or None to return the</span>
+<span class="sd">      unmodified cochleagram; see `apply_envelope_downsample` for more</span>
+<span class="sd">      information. If `ret_mode` is &#39;envs&#39;, this will be applied to the</span>
+<span class="sd">      cochleagram before the nonlinearity, otherwise no downsampling will be</span>
+<span class="sd">      performed. Providing a callable for custom downsampling is suggested.</span>
+<span class="sd">    nonlinearity ({None, &#39;db&#39;, &#39;power&#39;, callable}, optional): The `nonlinearity`</span>
+<span class="sd">      argument can be an predefined type, a callable</span>
+<span class="sd">      (to apply a custom nonlinearity), or None to return the unmodified</span>
+<span class="sd">      cochleagram; see `apply_envelope_nonlinearity` for more information.</span>
+<span class="sd">      If `ret_mode` is &#39;envs&#39;, this will be applied to the cochleagram after</span>
+<span class="sd">      downsampling, otherwise no nonlinearity will be applied. Providing a</span>
+<span class="sd">      callable for applying a custom nonlinearity is suggested.</span>
+<span class="sd">    fft_mode ({&#39;auto&#39;, &#39;fftw&#39;, &#39;np&#39;}, optional): Determine what implementation</span>
+<span class="sd">      to use for FFT-like operations. &#39;auto&#39; will attempt to use pyfftw, but</span>
+<span class="sd">      will fallback to numpy, if necessary.</span>
+<span class="sd">    ret_mode ({&#39;envs&#39;, &#39;subband&#39;, &#39;analytic&#39;, &#39;all&#39;}): Determines what will be</span>
+<span class="sd">      returned. &#39;envs&#39; (default) returns the subband envelopes; &#39;subband&#39;</span>
+<span class="sd">      returns just the subbands, &#39;analytic&#39; returns the analytic signal provided</span>
+<span class="sd">      by the Hilbert transform, &#39;all&#39; returns all local variables created in this</span>
+<span class="sd">      function.</span>
+<span class="sd">    strict (bool, optional): If True (default), will include the extra</span>
+<span class="sd">      highpass and lowpass filters required to make the filterbank invertible.</span>
+<span class="sd">      If False, this will only perform calculations on the bandpass filters; note</span>
+<span class="sd">      this decreases the number of frequency channels in the output by</span>
+<span class="sd">       2 * `sample_factor`.</span>
+<span class="sd">      function is used in a way that is unsupported by the MATLAB implemenation.</span>
+<span class="sd">    strict (bool, optional): If True (default), will throw an errors if this</span>
+<span class="sd">      function is used in a way that is unsupported by the MATLAB implemenation.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">    **out**: The output, depending on the value of `ret_mode`. If the `ret_mode`</span>
+<span class="sd">      is &#39;envs&#39; and a downsampling and/or nonlinearity</span>
+<span class="sd">      operation was requested, the output will reflect these operations.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">strict</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sr</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`sr` must be an int; ignore with `strict`=False&#39;</span><span class="p">)</span>
+    <span class="c1"># make sure low_lim and hi_lim are int</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">low_lim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`low_lim` must be an int; ignore with `strict`=False&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hi_lim</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`hi_lim` must be an int; ignore with `strict`=False&#39;</span><span class="p">)</span>
+
+  <span class="n">ret_mode</span> <span class="o">=</span> <span class="n">ret_mode</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">ret_mode</span> <span class="o">==</span> <span class="s1">&#39;all&#39;</span><span class="p">:</span>
+    <span class="n">ret_all_sb</span> <span class="o">=</span> <span class="kc">True</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">ret_all_sb</span> <span class="o">=</span> <span class="kc">False</span>
+
+  <span class="c1"># verify n is positive</span>
+  <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;number of filters `n` must be positive; found: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
+
+  <span class="c1"># allow for batch generation without creating filters everytime</span>
+  <span class="n">batch_signal</span> <span class="o">=</span> <span class="n">sb</span><span class="o">.</span><span class="n">reshape_signal_batch</span><span class="p">(</span><span class="n">signal</span><span class="p">)</span>  <span class="c1"># (batch_dim, waveform_samples)</span>
+
+  <span class="c1"># only make the filters once</span>
+  <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;no_hp_lp_filts&#39;</span><span class="p">):</span>
+    <span class="n">erb_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;no_highpass&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;no_lowpass&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">erb_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+  <span class="c1"># print(erb_kwargs)</span>
+  <span class="n">filts</span><span class="p">,</span> <span class="n">hz_cutoffs</span><span class="p">,</span> <span class="n">freqs</span> <span class="o">=</span> <span class="n">erb</span><span class="o">.</span><span class="n">make_erb_cos_filters_nx</span><span class="p">(</span><span class="n">batch_signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+      <span class="n">sr</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">low_lim</span><span class="p">,</span> <span class="n">hi_lim</span><span class="p">,</span> <span class="n">sample_factor</span><span class="p">,</span> <span class="n">pad_factor</span><span class="o">=</span><span class="n">pad_factor</span><span class="p">,</span>
+      <span class="n">full_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="n">strict</span><span class="p">,</span> <span class="o">**</span><span class="n">erb_kwargs</span><span class="p">)</span>
+
+  <span class="c1"># utils.filtshow(freqs, filts, hz_cutoffs, use_log_x=True)</span>
+
+  <span class="n">freqs_to_plot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span>
+
+  <span class="c1"># print(filts.shape)</span>
+  <span class="c1"># plt.figure(figsize=(18,5))</span>
+  <span class="c1"># # plt.plot(freqs_to_plot, filts[:,3:11], &#39;k&#39;)</span>
+  <span class="c1"># plt.plot(freqs_to_plot, filts[:,5:13], &#39;k&#39;, linewidth=2)</span>
+  <span class="c1"># plt.xlim([2, 3.5])</span>
+  <span class="c1"># plt.ylim([0, None])</span>
+  <span class="c1"># plt.title(&#39;%s @ %s&#39; % (n, sample_factor))</span>
+  <span class="c1"># wfn = &#39;/om/user/raygon/projects/deepFerret/src/dflearn/COSYNE18_diagPlots/filters_%s_%s.pdf&#39; % (n, sample_factor)</span>
+  <span class="c1"># plt.savefig(wfn)</span>
+  <span class="c1"># plt.show()</span>
+  <span class="c1"># ipdb.set_trace()</span>
+
+  <span class="n">is_batch</span> <span class="o">=</span> <span class="n">batch_signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">batch_signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+    <span class="c1"># if is_batch:</span>
+    <span class="c1">#   print(&#39;generating cochleagram -&gt; %s/%s&#39; % (i+1, batch_signal.shape[0]))</span>
+
+    <span class="n">temp_signal_flat</span> <span class="o">=</span> <span class="n">sb</span><span class="o">.</span><span class="n">reshape_signal_canonical</span><span class="p">(</span><span class="n">batch_signal</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">ret_mode</span> <span class="o">==</span> <span class="s1">&#39;envs&#39;</span> <span class="ow">or</span> <span class="n">ret_mode</span> <span class="o">==</span> <span class="s1">&#39;all&#39;</span><span class="p">:</span>
+      <span class="n">temp_sb</span> <span class="o">=</span> <span class="n">sb</span><span class="o">.</span><span class="n">generate_subband_envelopes_fast</span><span class="p">(</span><span class="n">temp_signal_flat</span><span class="p">,</span> <span class="n">filts</span><span class="p">,</span>
+          <span class="n">pad_factor</span><span class="o">=</span><span class="n">pad_factor</span><span class="p">,</span> <span class="n">fft_mode</span><span class="o">=</span><span class="n">fft_mode</span><span class="p">,</span> <span class="n">debug_ret_all</span><span class="o">=</span><span class="n">ret_all_sb</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">ret_mode</span> <span class="o">==</span> <span class="s1">&#39;subband&#39;</span><span class="p">:</span>
+      <span class="n">temp_sb</span> <span class="o">=</span> <span class="n">sb</span><span class="o">.</span><span class="n">generate_subbands</span><span class="p">(</span><span class="n">temp_signal_flat</span><span class="p">,</span> <span class="n">filts</span><span class="p">,</span> <span class="n">pad_factor</span><span class="o">=</span><span class="n">pad_factor</span><span class="p">,</span>
+          <span class="n">fft_mode</span><span class="o">=</span><span class="n">fft_mode</span><span class="p">,</span> <span class="n">debug_ret_all</span><span class="o">=</span><span class="n">ret_all_sb</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">ret_mode</span> <span class="o">==</span> <span class="s1">&#39;analytic&#39;</span><span class="p">:</span>
+      <span class="n">temp_sb</span> <span class="o">=</span> <span class="n">sb</span><span class="o">.</span><span class="n">generate_subbands</span><span class="p">(</span><span class="n">temp_signal_flat</span><span class="p">,</span> <span class="n">filts</span><span class="p">,</span> <span class="n">pad_factor</span><span class="o">=</span><span class="n">pad_factor</span><span class="p">,</span>
+          <span class="n">fft_mode</span><span class="o">=</span><span class="n">fft_mode</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;`ret_mode` is not supported.&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ret_mode</span> <span class="o">==</span> <span class="s1">&#39;envs&#39;</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">downsample</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">callable</span><span class="p">(</span><span class="n">downsample</span><span class="p">):</span>
+        <span class="c1"># downsample is None or callable</span>
+        <span class="n">temp_sb</span> <span class="o">=</span> <span class="n">apply_envelope_downsample</span><span class="p">(</span><span class="n">temp_sb</span><span class="p">,</span> <span class="n">downsample</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># interpret downsample as new sampling rate</span>
+        <span class="n">temp_sb</span> <span class="o">=</span> <span class="n">apply_envelope_downsample</span><span class="p">(</span><span class="n">temp_sb</span><span class="p">,</span> <span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">downsample</span><span class="p">)</span>
+      <span class="n">temp_sb</span> <span class="o">=</span> <span class="n">apply_envelope_nonlinearity</span><span class="p">(</span><span class="n">temp_sb</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">sb_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(([</span><span class="n">batch_signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">temp_sb</span><span class="o">.</span><span class="n">shape</span><span class="p">)))</span>
+    <span class="n">sb_out</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_sb</span>
+
+  <span class="n">sb_out</span> <span class="o">=</span> <span class="n">sb_out</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">ret_mode</span> <span class="o">==</span> <span class="s1">&#39;all&#39;</span><span class="p">:</span>
+    <span class="n">out_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1"># add all local variables to out_dict</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">():</span>
+      <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;out_dict&#39;</span><span class="p">:</span>
+        <span class="n">out_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="nb">locals</span><span class="p">()[</span><span class="n">k</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">out_dict</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">sb_out</span></div>
+
+
+<div class="viewcode-block" id="human_cochleagram"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.cochleagram.human_cochleagram">[docs]</a><span class="k">def</span> <span class="nf">human_cochleagram</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">low_lim</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">hi_lim</span><span class="o">=</span><span class="mi">20000</span><span class="p">,</span>
+        <span class="n">sample_factor</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">pad_factor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">downsample</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">fft_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">ret_mode</span><span class="o">=</span><span class="s1">&#39;envs&#39;</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Convenience function to generate the subband envelopes</span>
+<span class="sd">  (i.e., the cochleagram) of the provided signal using sensible default</span>
+<span class="sd">  parameters for a human cochleagram.</span>
+
+<span class="sd">  This first creates a an ERB filterbank with the provided input arguments for</span>
+<span class="sd">  the provided signal. This filterbank is then used to perform the subband</span>
+<span class="sd">  decomposition to create the subband envelopes. The resulting envelopes can be</span>
+<span class="sd">  optionally downsampled and then modified with a nonlinearity.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    signal (array): The sound signal (waveform) in the time domain. Should be</span>
+<span class="sd">      flattened, i.e., the shape is (n_samples,).</span>
+<span class="sd">    sr (int): Sampling rate associated with the signal waveform.</span>
+<span class="sd">    n (int): Number of filters (subbands) to be generated with standard</span>
+<span class="sd">      sampling (i.e., using a sampling factor of 1). Note, the actual number of</span>
+<span class="sd">      filters in the generated filterbank depends on the sampling factor, and</span>
+<span class="sd">      will also include lowpass and highpass filters that allow for</span>
+<span class="sd">      perfect reconstruction of the input signal (the exact number of lowpass</span>
+<span class="sd">      and highpass filters is determined by the sampling factor).</span>
+<span class="sd">    low_lim (int): Lower limit of frequency range. Filters will not be defined</span>
+<span class="sd">      below this limit.</span>
+<span class="sd">    hi_lim (int): Upper limit of frequency range. Filters will not be defined</span>
+<span class="sd">      above this limit.</span>
+<span class="sd">    sample_factor (int): Positive integer that determines how densely ERB function</span>
+<span class="sd">     will be sampled to create bandpass filters. 1 represents standard sampling;</span>
+<span class="sd">     adjacent bandpass filters will overlap by 50%. 2 represents 2x overcomplete sampling;</span>
+<span class="sd">     adjacent bandpass filters will overlap by 75%. 4 represents 4x overcomplete sampling;</span>
+<span class="sd">     adjacent bandpass filters will overlap by 87.5%.</span>
+<span class="sd">    pad_factor (int, optional): If None (default), the signal will not be padded</span>
+<span class="sd">      before filtering. Otherwise, the filters will be created assuming the</span>
+<span class="sd">      waveform signal will be padded to length pad_factor*signal_length.</span>
+<span class="sd">    downsample (None, int, callable, optional): The `downsample` argument can</span>
+<span class="sd">      be an integer representing the upsampling factor in polyphase resampling</span>
+<span class="sd">      (with `sr` as the downsampling factor), a callable</span>
+<span class="sd">      (to perform custom downsampling), or None to return the</span>
+<span class="sd">      unmodified cochleagram; see `apply_envelope_downsample` for more</span>
+<span class="sd">      information. If `ret_mode` is &#39;envs&#39;, this will be applied to the</span>
+<span class="sd">      cochleagram before the nonlinearity, otherwise no downsampling will be</span>
+<span class="sd">      performed. Providing a callable for custom downsampling is suggested.</span>
+<span class="sd">    nonlinearity ({None, &#39;db&#39;, &#39;power&#39;, callable}, optional): The `nonlinearity`</span>
+<span class="sd">      argument can be an predefined type, a callable</span>
+<span class="sd">      (to apply a custom nonlinearity), or None to return the unmodified</span>
+<span class="sd">      cochleagram; see `apply_envelope_nonlinearity` for more information.</span>
+<span class="sd">      If `ret_mode` is &#39;envs&#39;, this will be applied to the cochleagram after</span>
+<span class="sd">      downsampling, otherwise no nonlinearity will be applied. Providing a</span>
+<span class="sd">      callable for applying a custom nonlinearity is suggested.</span>
+<span class="sd">    fft_mode ({&#39;auto&#39;, &#39;fftw&#39;, &#39;np&#39;}, optional): Determine what implementation</span>
+<span class="sd">      to use for FFT-like operations. &#39;auto&#39; will attempt to use pyfftw, but</span>
+<span class="sd">      will fallback to numpy, if necessary.</span>
+<span class="sd">    ret_mode ({&#39;envs&#39;, &#39;subband&#39;, &#39;analytic&#39;, &#39;all&#39;}): Determines what will be</span>
+<span class="sd">      returned. &#39;envs&#39; (default) returns the subband envelopes; &#39;subband&#39;</span>
+<span class="sd">      returns just the subbands, &#39;analytic&#39; returns the analytic signal provided</span>
+<span class="sd">      by the Hilber transform, &#39;all&#39; returns all local variables created in this</span>
+<span class="sd">      function.</span>
+<span class="sd">    strict (bool, optional): If True (default), will throw an errors if this</span>
+<span class="sd">      function is used in a way that is unsupported by the MATLAB implemenation.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">    **out**: The output, depending on the value of `ret_mode`. If the `ret_mode`</span>
+<span class="sd">      is &#39;envs&#39; and a downsampling and/or nonlinearity</span>
+<span class="sd">      operation was requested, the output will reflect these operations.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">erb</span><span class="o">.</span><span class="n">freq2erb</span><span class="p">(</span><span class="n">hi_lim</span><span class="p">)</span> <span class="o">-</span> <span class="n">erb</span><span class="o">.</span><span class="n">freq2erb</span><span class="p">(</span><span class="n">low_lim</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+  <span class="n">out</span> <span class="o">=</span> <span class="n">cochleagram</span><span class="p">(</span><span class="n">signal</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">low_lim</span><span class="p">,</span> <span class="n">hi_lim</span><span class="p">,</span> <span class="n">sample_factor</span><span class="p">,</span> <span class="n">pad_factor</span><span class="p">,</span>
+      <span class="n">downsample</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="n">fft_mode</span><span class="p">,</span> <span class="n">ret_mode</span><span class="p">,</span> <span class="n">strict</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">out</span></div>
+
+
+<div class="viewcode-block" id="invert_cochleagram_with_filterbank"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.cochleagram.invert_cochleagram_with_filterbank">[docs]</a><span class="k">def</span> <span class="nf">invert_cochleagram_with_filterbank</span><span class="p">(</span><span class="n">cochleagram</span><span class="p">,</span> <span class="n">filters</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">target_rms</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+        <span class="n">downsample</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Generate a waveform from a cochleagram using a provided filterbank.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    cochleagram (array): The subband envelopes (i.e., cochleagram) to invert.</span>
+<span class="sd">    filters (array): The filterbank, in frequency space, used to generate the</span>
+<span class="sd">      cochleagram. This should be the full filter-set output of</span>
+<span class="sd">      erbFilter.make_erb_cos_filters_nx, or similar.</span>
+<span class="sd">    sr (int): Sampling rate associated with the cochleagram.</span>
+<span class="sd">    target_rms (scalar): Target root-mean-squared value of the output, related</span>
+<span class="sd">      to SNR, TODO: this needs to be checked</span>
+<span class="sd">    downsample (None, int, callable, optional): If downsampling was performed on</span>
+<span class="sd">      `cochleagram`, this is the operation to invert that downsampling</span>
+<span class="sd">      (i.e., upsample); this determines the length of the output signal.</span>
+<span class="sd">      The `downsample` argument can be an integer representing the downsampling</span>
+<span class="sd">      factor in polyphase resampling (with `sr` as the upsampling factor),</span>
+<span class="sd">      a callable (to perform custom downsampling), or None to return the</span>
+<span class="sd">      unmodified cochleagram; see `apply_envelope_downsample` for more</span>
+<span class="sd">      information. Providing a callable for custom function for upsampling</span>
+<span class="sd">      is suggested.</span>
+<span class="sd">    nonlinearity ({None, &#39;db&#39;, &#39;power&#39;, callable}, optional): If a nonlinearity</span>
+<span class="sd">      was applied to `cochleagram`, this is the operation to invert that</span>
+<span class="sd">      nonlinearity.  The `nonlinearity` argument can be an predefined type,</span>
+<span class="sd">      a callable (to apply a custom nonlinearity), or None to return the</span>
+<span class="sd">      unmodified cochleagram; see `apply_envelope_nonlinearity` for more</span>
+<span class="sd">      information. If this is a predefined type, the nonlinearity will be</span>
+<span class="sd">      inverted according to `apply_envelope_nonlinearity`.</span>
+<span class="sd">    fft_mode ({&#39;auto&#39;, &#39;fftw&#39;, &#39;np&#39;}, optional): Determine what implementation</span>
+<span class="sd">      to use for FFT-like operations. &#39;auto&#39; will attempt to use pyfftw, but</span>
+<span class="sd">      will fallback to numpy, if necessary.</span>
+<span class="sd">    n_iter (int, optional): Number of iterations to perform for the inversion.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">    **inv_signal**: The waveform signal created by inverting the cochleagram.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># decompress envelopes</span>
+  <span class="n">linear_cochleagram</span> <span class="o">=</span> <span class="n">apply_envelope_nonlinearity</span><span class="p">(</span><span class="n">cochleagram</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">downsample</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">callable</span><span class="p">(</span><span class="n">downsample</span><span class="p">):</span>
+    <span class="n">_wrapped_downsample</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">coch</span><span class="p">,</span> <span class="n">inv</span><span class="p">:</span> <span class="n">apply_envelope_downsample</span><span class="p">(</span><span class="n">coch</span><span class="p">,</span> <span class="n">downsample</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="n">inv</span><span class="p">)</span>  <span class="c1"># downsample is None or callable</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="c1"># interpret downsample as new sampling rate</span>
+    <span class="n">_wrapped_downsample</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">coch</span><span class="p">,</span> <span class="n">inv</span><span class="p">:</span> <span class="n">apply_envelope_downsample</span><span class="p">(</span><span class="n">coch</span><span class="p">,</span> <span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">downsample</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="n">inv</span><span class="p">)</span>
+  <span class="c1"># apply the upsampling</span>
+  <span class="n">linear_cochleagram</span> <span class="o">=</span> <span class="n">_wrapped_downsample</span><span class="p">(</span><span class="n">cochleagram</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+  <span class="n">coch_length</span> <span class="o">=</span> <span class="n">linear_cochleagram</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+  <span class="c1"># cochleagram /= cochleagram.max()</span>
+  <span class="c1"># print(&#39;ref coch: [%s, %s]&#39; % (cochleagram.min(), cochleagram.max()))</span>
+
+  <span class="c1"># generated signal starts from noise</span>
+  <span class="n">synth_size</span> <span class="o">=</span> <span class="n">coch_length</span>
+  <span class="n">synth_sound</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="n">synth_size</span><span class="p">)</span>  <span class="c1"># uniform noise</span>
+  <span class="c1"># synth_sound = np.random.randn(synth_size)  # gaussian noise</span>
+
+  <span class="c1"># print(&#39;synth sound [%s, %s]&#39; % (synth_sound.min(), synth_sound.max()))</span>
+
+  <span class="c1"># iteratively enforce envelopes on cochleagram of iter_noise</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_iter</span><span class="p">):</span>
+    <span class="c1"># calculate error in decibels between original and synthesized cochleagrams</span>
+    <span class="c1"># if i &gt; 0:</span>
+    <span class="c1">#   db_error = np.abs(cochleagram - np.abs(synth_analytic_subbands))</span>
+    <span class="c1"># else:</span>
+    <span class="c1">#   db_error = np.abs(cochleagram - np.zeros_like(cochleagram))</span>
+
+    <span class="c1"># synth_sound = target_rms / utils.rms(synth_sound) * synth_sound</span>
+
+    <span class="c1"># GET THE ERROR OF ENVS FROM DOWNSAMPLING</span>
+    <span class="n">synth_analytic_subbands</span> <span class="o">=</span> <span class="n">sb</span><span class="o">.</span><span class="n">generate_analytic_subbands</span><span class="p">(</span><span class="n">synth_sound</span><span class="p">,</span> <span class="n">filters</span><span class="p">)</span>
+    <span class="n">synth_subband_mags</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">synth_analytic_subbands</span><span class="p">)</span>  <span class="c1"># complex magnitude</span>
+    <span class="n">synth_subband_phases</span> <span class="o">=</span> <span class="n">synth_analytic_subbands</span> <span class="o">/</span> <span class="n">synth_subband_mags</span>  <span class="c1"># should be phases</span>
+
+    <span class="n">synth_subbands</span> <span class="o">=</span> <span class="n">synth_subband_phases</span> <span class="o">*</span> <span class="n">linear_cochleagram</span>
+    <span class="n">synth_subbands</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">synth_subbands</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">synth_size</span><span class="p">)</span>
+    <span class="n">synth_sound</span> <span class="o">=</span> <span class="n">sb</span><span class="o">.</span><span class="n">collapse_subbands</span><span class="p">(</span><span class="n">synth_subbands</span><span class="p">,</span> <span class="n">filters</span><span class="p">)</span>
+
+    <span class="n">synth_analytic_subbands</span> <span class="o">=</span> <span class="n">sb</span><span class="o">.</span><span class="n">generate_analytic_subbands</span><span class="p">(</span><span class="n">synth_sound</span><span class="p">,</span> <span class="n">filters</span><span class="p">)</span>
+    <span class="n">synth_coch</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">synth_analytic_subbands</span><span class="p">)</span>
+
+    <span class="c1"># print(&#39;ref coch: [%s, %s], synth coch: [%s, %s]&#39; % (cochleagram.min(), cochleagram.max(), synth_coch.min(), synth_coch.max()))</span>
+
+    <span class="c1"># apply compression and downsample if necessary to compare reference coch to synth</span>
+    <span class="n">synth_coch</span> <span class="o">=</span> <span class="n">_wrapped_downsample</span><span class="p">(</span><span class="n">linear_cochleagram</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="n">synth_coch</span> <span class="o">=</span> <span class="n">apply_envelope_nonlinearity</span><span class="p">(</span><span class="n">synth_coch</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># compute error using raw cochleagrams</span>
+    <span class="n">db_error</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">cochleagram</span> <span class="o">-</span> <span class="n">synth_coch</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span> <span class="o">/</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">cochleagram</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;inverting iteration: </span><span class="si">%s</span><span class="s1">, error (db): </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">db_error</span><span class="p">))</span>
+
+  <span class="k">return</span> <span class="n">synth_sound</span><span class="p">,</span> <span class="n">synth_coch</span></div>
+
+
+<div class="viewcode-block" id="invert_cochleagram"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.cochleagram.invert_cochleagram">[docs]</a><span class="k">def</span> <span class="nf">invert_cochleagram</span><span class="p">(</span><span class="n">cochleagram</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">low_lim</span><span class="p">,</span> <span class="n">hi_lim</span><span class="p">,</span> <span class="n">sample_factor</span><span class="p">,</span>
+        <span class="n">pad_factor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target_rms</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">downsample</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Generate a waveform from a cochleagram using the provided arguments to</span>
+<span class="sd">  construct a filterbank.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    cochleagram (array): The subband envelopes (i.e., cochleagram) to invert.</span>
+<span class="sd">    sr (int): Sampling rate associated with the cochleagram.</span>
+<span class="sd">    n (int): Number of filters (subbands) to be generated with standard</span>
+<span class="sd">      sampling (i.e., using a sampling factor of 1). Note, the actual number of</span>
+<span class="sd">      filters in the generated filterbank depends on the sampling factor, and</span>
+<span class="sd">      will also include lowpass and highpass filters that allow for</span>
+<span class="sd">      perfect reconstruction of the input signal (the exact number of lowpass</span>
+<span class="sd">      and highpass filters is determined by the sampling factor).</span>
+<span class="sd">    low_lim (int): Lower limit of frequency range. Filters will not be defined</span>
+<span class="sd">      below this limit.</span>
+<span class="sd">    hi_lim (int): Upper limit of frequency range. Filters will not be defined</span>
+<span class="sd">      above this limit.</span>
+<span class="sd">    sample_factor (int): Positive integer that determines how densely ERB function</span>
+<span class="sd">     will be sampled to create bandpass filters. 1 represents standard sampling;</span>
+<span class="sd">     adjacent bandpass filters will overlap by 50%. 2 represents 2x overcomplete sampling;</span>
+<span class="sd">     adjacent bandpass filters will overlap by 75%. 4 represents 4x overcomplete sampling;</span>
+<span class="sd">     adjacent bandpass filters will overlap by 87.5%.</span>
+<span class="sd">    pad_factor (int, optional): If None (default), the signal will not be padded</span>
+<span class="sd">      before filtering. Otherwise, the filters will be created assuming the</span>
+<span class="sd">      waveform signal will be padded to length pad_factor*signal_length.</span>
+<span class="sd">    target_rms (scalar): Target root-mean-squared value of the output, related</span>
+<span class="sd">      to SNR, TODO: this needs to be checked</span>
+<span class="sd">    downsample (None, int, callable, optional): If downsampling was performed on</span>
+<span class="sd">      `cochleagram`, this is the operation to invert that downsampling</span>
+<span class="sd">      (i.e., upsample); this determines the length of the output signal.</span>
+<span class="sd">      The `downsample` argument can be an integer representing the downsampling</span>
+<span class="sd">      factor in polyphase resampling (with `sr` as the upsampling factor),</span>
+<span class="sd">      a callable (to perform custom downsampling), or None to return the</span>
+<span class="sd">      unmodified cochleagram; see `apply_envelope_downsample` for more</span>
+<span class="sd">      information. Providing a callable for custom function for upsampling</span>
+<span class="sd">      is suggested.</span>
+<span class="sd">    nonlinearity ({None, &#39;db&#39;, &#39;power&#39;, callable}, optional): If a nonlinearity</span>
+<span class="sd">      was applied to `cochleagram`, this is the operation to invert that</span>
+<span class="sd">      nonlinearity.  The `nonlinearity` argument can be an predefined type,</span>
+<span class="sd">      a callable (to apply a custom nonlinearity), or None to return the</span>
+<span class="sd">      unmodified cochleagram; see `apply_envelope_nonlinearity` for more</span>
+<span class="sd">      information. If this is a predefined type, the nonlinearity will be</span>
+<span class="sd">      inverted according to `apply_envelope_nonlinearity`.</span>
+<span class="sd">    fft_mode ({&#39;auto&#39;, &#39;fftw&#39;, &#39;np&#39;}, optional): Determine what implementation</span>
+<span class="sd">      to use for FFT-like operations. &#39;auto&#39; will attempt to use pyfftw, but</span>
+<span class="sd">      will fallback to numpy, if necessary.</span>
+<span class="sd">    n_iter (int, optional): Number of iterations to perform for the inversion.</span>
+<span class="sd">    strict (bool, optional): If True (default), will throw an errors if this</span>
+<span class="sd">      function is used in a way that is unsupported by the MATLAB implemenation.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">    **inv_signal**: The waveform signal created by inverting the cochleagram.</span>
+<span class="sd">    **inv_coch**: The inverted cochleagram.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># decompress envelopes</span>
+  <span class="n">cochleagram_ref</span> <span class="o">=</span> <span class="n">apply_envelope_nonlinearity</span><span class="p">(</span><span class="n">cochleagram</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+  <span class="c1"># upsample envelopes</span>
+  <span class="k">if</span> <span class="n">downsample</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">callable</span><span class="p">(</span><span class="n">downsample</span><span class="p">):</span>
+    <span class="c1"># downsample is None or callable</span>
+    <span class="n">cochleagram_ref</span> <span class="o">=</span> <span class="n">apply_envelope_downsample</span><span class="p">(</span><span class="n">cochleagram_ref</span><span class="p">,</span> <span class="n">downsample</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="c1"># interpret downsample as new sampling rate</span>
+    <span class="n">cochleagram_ref</span> <span class="o">=</span> <span class="n">apply_envelope_downsample</span><span class="p">(</span><span class="n">cochleagram_ref</span><span class="p">,</span> <span class="s1">&#39;poly&#39;</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">downsample</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="n">signal_length</span> <span class="o">=</span> <span class="n">cochleagram_ref</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+<span class="c1"># generate filterbank</span>
+  <span class="n">filts</span><span class="p">,</span> <span class="n">hz_cutoffs</span><span class="p">,</span> <span class="n">freqs</span> <span class="o">=</span> <span class="n">erb</span><span class="o">.</span><span class="n">make_erb_cos_filters_nx</span><span class="p">(</span><span class="n">signal_length</span><span class="p">,</span>
+      <span class="n">sr</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">low_lim</span><span class="p">,</span> <span class="n">hi_lim</span><span class="p">,</span> <span class="n">sample_factor</span><span class="p">,</span> <span class="n">pad_factor</span><span class="o">=</span><span class="n">pad_factor</span><span class="p">,</span>
+      <span class="n">full_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="n">strict</span><span class="p">)</span>
+
+  <span class="c1"># invert filterbank</span>
+  <span class="n">inv_signal</span><span class="p">,</span> <span class="n">inv_coch</span> <span class="o">=</span> <span class="n">invert_cochleagram_with_filterbank</span><span class="p">(</span><span class="n">cochleagram_ref</span><span class="p">,</span> <span class="n">filts</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">target_rms</span><span class="o">=</span><span class="n">target_rms</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="n">n_iter</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">inv_signal</span><span class="p">,</span> <span class="n">inv_coch</span></div>
+
+
+<div class="viewcode-block" id="apply_envelope_downsample"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.cochleagram.apply_envelope_downsample">[docs]</a><span class="k">def</span> <span class="nf">apply_envelope_downsample</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">audio_sr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">env_sr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Apply a downsampling operation to cochleagram subband envelopes.</span>
+
+<span class="sd">  The `mode` argument can be a predefined downsampling type from</span>
+<span class="sd">  {&#39;poly&#39;, &#39;resample&#39;, &#39;decimate&#39;}, a callable (to perform custom downsampling),</span>
+<span class="sd">  or None to return the unmodified cochleagram. If `mode` is a predefined type,</span>
+<span class="sd">  `audio_sr` and `env_sr` are required.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    subband_envelopes (array): Cochleagram subbands to mode.</span>
+<span class="sd">    mode ({&#39;poly&#39;, &#39;resample&#39;, &#39;decimate&#39;, callable, None}): Determines the</span>
+<span class="sd">      downsampling operation to apply to the cochleagram. &#39;decimate&#39; will</span>
+<span class="sd">      resample using scipy.signal.decimate with audio_sr/env_sr as the</span>
+<span class="sd">      downsampling factor. &#39;resample&#39; will downsample using</span>
+<span class="sd">      scipy.signal.resample with np.ceil(subband_envelopes.shape[1]*(audio_sr/env_sr))</span>
+<span class="sd">      as the number of samples. &#39;poly&#39; will resample using scipy.signal.resample_poly</span>
+<span class="sd">      with `env_sr` as the upsampling factor and `audio_sr` as the downsampling</span>
+<span class="sd">      factor. If `mode` is a python callable (e.g., function), it will be</span>
+<span class="sd">      applied to `subband_envelopes`. If this is None, no  downsampling is</span>
+<span class="sd">      performed and the unmodified cochleagram is returned.</span>
+<span class="sd">    audio_sr (int, optional): If using a predefined sampling `mode`, this</span>
+<span class="sd">      represents the sampling rate of the original signal.</span>
+<span class="sd">    env_sr (int, optional): If using a predefined sampling `mode`, this</span>
+<span class="sd">      represents the sampling rate of the downsampled subband envelopes.</span>
+<span class="sd">    invert (bool, optional):  If using a predefined sampling `mode`, this</span>
+<span class="sd">      will invert (i.e., upsample) the subband envelopes using the values</span>
+<span class="sd">      provided in `audio_sr` and `env_sr`.</span>
+<span class="sd">    strict (bool, optional): If using a predefined sampling `mode`, this</span>
+<span class="sd">      ensure the downsampling will result in an integer number of samples. This</span>
+<span class="sd">      should mean the upsample(downsample(x)) will have the same number of</span>
+<span class="sd">      samples as x.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">    **downsampled_subband_envelopes**: The subband_envelopes after being</span>
+<span class="sd">      downsampled with `mode`.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">mode</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">pass</span>
+  <span class="k">elif</span> <span class="n">callable</span><span class="p">(</span><span class="n">mode</span><span class="p">):</span>
+    <span class="c1"># apply the downsampling function</span>
+    <span class="n">subband_envelopes</span> <span class="o">=</span> <span class="n">mode</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">audio_sr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`audio_sr` cannot be None. Provide sampling rate of original audio signal.&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">env_sr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`env_sr` cannot be None. Provide sampling rate of subband envelopes (cochleagram).&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;decimate&#39;</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">invert</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># was BadCoefficients error with Chebyshev type I filter [default]</span>
+        <span class="n">subband_envelopes</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">decimate</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="p">,</span> <span class="n">audio_sr</span> <span class="o">//</span> <span class="n">env_sr</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ftype</span><span class="o">=</span><span class="s1">&#39;fir&#39;</span><span class="p">)</span> <span class="c1"># this caused weird banding artifacts</span>
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;resample&#39;</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">invert</span><span class="p">:</span>
+        <span class="n">subband_envelopes</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">audio_sr</span><span class="o">/</span><span class="n">env_sr</span><span class="p">)),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># fourier method: this causes NANs that get converted to 0s</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">subband_envelopes</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">env_sr</span><span class="o">/</span><span class="n">audio_sr</span><span class="p">)),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># fourier method: this causes NANs that get converted to 0s</span>
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;poly&#39;</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">strict</span><span class="p">:</span>
+        <span class="n">n_samples</span> <span class="o">=</span> <span class="n">subband_envelopes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">audio_sr</span> <span class="o">/</span> <span class="n">env_sr</span><span class="p">)</span> <span class="k">if</span> <span class="n">invert</span> <span class="k">else</span> <span class="n">subband_envelopes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">env_sr</span> <span class="o">/</span> <span class="n">audio_sr</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)):</span>
+          <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Choose `env_sr` and `audio_sr` such that the number of samples after polyphase resampling is an integer&#39;</span><span class="o">+</span>
+                           <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">(length: </span><span class="si">%s</span><span class="s1">, env_sr: </span><span class="si">%s</span><span class="s1">, audio_sr: </span><span class="si">%s</span><span class="s1"> !--&gt; </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">subband_envelopes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">env_sr</span><span class="p">,</span> <span class="n">audio_sr</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">))</span>
+      <span class="k">if</span> <span class="n">invert</span><span class="p">:</span>
+        <span class="n">subband_envelopes</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">resample_poly</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="p">,</span> <span class="n">audio_sr</span><span class="p">,</span> <span class="n">env_sr</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># this requires v0.18 of scipy</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">subband_envelopes</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">resample_poly</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="p">,</span> <span class="n">env_sr</span><span class="p">,</span> <span class="n">audio_sr</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># this requires v0.18 of scipy</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unsupported downsampling `mode`: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">mode</span><span class="p">)</span>
+  <span class="n">subband_envelopes</span><span class="p">[</span><span class="n">subband_envelopes</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="k">return</span> <span class="n">subband_envelopes</span></div>
+
+
+<div class="viewcode-block" id="apply_envelope_nonlinearity"><a class="viewcode-back" href="../../pycochleagram.html#pycochleagram.cochleagram.apply_envelope_nonlinearity">[docs]</a><span class="k">def</span> <span class="nf">apply_envelope_nonlinearity</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Apply a nonlinearity to the cochleagram.</span>
+
+<span class="sd">  The `nonlinearity` argument can be an predefined type, a callable</span>
+<span class="sd">  (to apply a custom nonlinearity), or None to return the unmodified</span>
+<span class="sd">  cochleagram.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    subband_envelopes (array): Cochleagram to apply the nonlinearity to.</span>
+<span class="sd">    nonlinearity ({&#39;db&#39;, &#39;power&#39;}, callable, None): Determines the nonlinearity</span>
+<span class="sd">      operation to apply to the cochleagram. If this is a valid string, one</span>
+<span class="sd">      of the predefined nonlinearities will be used. It can be: &#39;power&#39; to</span>
+<span class="sd">      perform np.power(subband_envelopes, 3.0 / 10.0) or &#39;db&#39; to perform</span>
+<span class="sd">      20 * np.log10(subband_envelopes / np.max(subband_envelopes)), with values</span>
+<span class="sd">      clamped to be greater than -60. If `nonlinearity` is a python callable</span>
+<span class="sd">      (e.g., function), it will be applied to `subband_envelopes`. If this is</span>
+<span class="sd">      None, no nonlinearity is applied and the unmodified cochleagram is</span>
+<span class="sd">      returned.</span>
+<span class="sd">    invert (bool): For predefined nonlinearities &#39;db&#39; and &#39;power&#39;, if False</span>
+<span class="sd">      (default), the nonlinearity will be applied. If True, the nonlinearity</span>
+<span class="sd">      will be inverted.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    array:</span>
+<span class="sd">    **nonlinear_subband_envelopes**: The subband_envelopes with the specified</span>
+<span class="sd">      nonlinearity applied.</span>
+
+<span class="sd">  Raises:</span>
+<span class="sd">      ValueError: Error if the provided `nonlinearity` isn&#39;t a recognized</span>
+<span class="sd">      option.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># apply nonlinearity</span>
+  <span class="k">if</span> <span class="n">nonlinearity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">pass</span>
+  <span class="k">elif</span> <span class="n">nonlinearity</span> <span class="o">==</span> <span class="s2">&quot;power&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">invert</span><span class="p">:</span>
+      <span class="n">subband_envelopes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="p">,</span> <span class="mf">10.0</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">)</span>  <span class="c1"># from Alex&#39;s code</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">subband_envelopes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="p">,</span> <span class="mf">3.0</span> <span class="o">/</span> <span class="mf">10.0</span><span class="p">)</span>  <span class="c1"># from Alex&#39;s code</span>
+  <span class="k">elif</span> <span class="n">nonlinearity</span> <span class="o">==</span> <span class="s2">&quot;db&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">invert</span><span class="p">:</span>
+      <span class="n">subband_envelopes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">subband_envelopes</span> <span class="o">/</span> <span class="mi">20</span><span class="p">)</span>  <span class="c1"># adapted from Anastasiya&#39;s code</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">dtype_eps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+      <span class="n">subband_envelopes</span><span class="p">[</span><span class="n">subband_envelopes</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">dtype_eps</span>
+      <span class="n">subband_envelopes</span> <span class="o">=</span> <span class="mi">20</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">subband_envelopes</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="p">))</span>
+      <span class="n">subband_envelopes</span><span class="p">[</span><span class="n">subband_envelopes</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mi">60</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">60</span>
+  <span class="k">elif</span> <span class="n">callable</span><span class="p">(</span><span class="n">nonlinearity</span><span class="p">):</span>
+    <span class="n">subband_envelopes</span> <span class="o">=</span> <span class="n">nonlinearity</span><span class="p">(</span><span class="n">subband_envelopes</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;argument &quot;nonlinearity&quot; must be &quot;power&quot;, &quot;db&quot;, or a function.&#39;</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">subband_envelopes</span></div>
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Ray Gonzalez.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
