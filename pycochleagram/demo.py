@@ -13,13 +13,14 @@ from pycochleagram import cochleagram as cgram
 from pycochleagram import erbfilter as erb
 from pycochleagram import utils
 
-# import matplotlib.pyplot as plt
 
 if utils.check_if_display_exists():
+  import matplotlib.pyplot as plt
   from matplotlib.pyplot import imshow, show
 else:
   import matplotlib
   matplotlib.use('Agg')
+  import matplotlib.pyplot as plt
   from matplotlib.pyplot import imshow, show
 
 
