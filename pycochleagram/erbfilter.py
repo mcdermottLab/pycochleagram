@@ -112,7 +112,7 @@ def make_full_filter_set(filts, signal_length=None):
   return fft_filts.T
 
 
-def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor, pad_factor=None, full_filter=True, strict=True, **kwargs):
+def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor, padding_size=None, full_filter=True, strict=True, **kwargs):
   """Create ERB cosine filters, oversampled by a factor provided by "sample_factor"
 
   Args:
@@ -143,9 +143,9 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
      adjacent bandpass filters will overlap by 50%. 2 represents 2x overcomplete sampling;
      adjacent bandpass filters will overlap by 75%. 4 represents 4x overcomplete sampling;
      adjacent bandpass filters will overlap by 87.5%.
-    pad_factor (int, optional): If None (default), the signal will not be padded
+    padding_size (int, optional): If None (default), the signal will not be padded
       before filtering. Otherwise, the filters will be created assuming the
-      waveform signal will be padded to length pad_factor*signal_length.
+      waveform signal will be padded to length padding_size*signal_length.
     full_filter (bool, optional): If True (default), the complete filter that
       is ready to apply to the signal is returned. If False, only the first
       half of the filter is returned (likely positive terms of FFT).
@@ -178,8 +178,8 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
     else:
       warnings.warn(msg, RuntimeWarning, stacklevel=2)
 
-  if pad_factor is not None and pad_factor >= 1:
-    signal_length *= pad_factor
+  if padding_size is not None and padding_size >= 1:
+    signal_length += padding_size
 
   if np.remainder(signal_length, 2) == 0:  # even length
     n_freqs = signal_length // 2  # .0 does not include DC, likely the sampling grid
@@ -256,7 +256,7 @@ def make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, sample_factor
   return filts, center_freqs, freqs
 
 
-def make_erb_cos_filters_1x(signal_length, sr, n, low_lim, hi_lim, pad_factor=None, full_filter=False, strict=False):
+def make_erb_cos_filters_1x(signal_length, sr, n, low_lim, hi_lim, padding_size=None, full_filter=False, strict=False):
   """Create ERB cosine filterbank, sampled from ERB at 1x overcomplete.
 
   Returns n+2 filters as ??column vector
@@ -281,9 +281,9 @@ def make_erb_cos_filters_1x(signal_length, sr, n, low_lim, hi_lim, pad_factor=No
     n (int): number of filters to create
     low_lim (int): low cutoff of lowest band
     hi_lim (int): high cutoff of highest band
-    pad_factor (int, optional): If None (default), the signal will not be padded
+    padding_size (int, optional): If None (default), the signal will not be padded
       before filtering. Otherwise, the filters will be created assuming the
-      waveform signal will be padded to length pad_factor*signal_length.
+      waveform signal will be padded to length padding_size*signal_length.
     full_filter (bool, optional): If True, the complete filter that
       is ready to apply to the signal is returned. If False (default), only the first
       half of the filter is returned (likely positive terms of FFT).
@@ -300,10 +300,10 @@ def make_erb_cos_filters_1x(signal_length, sr, n, low_lim, hi_lim, pad_factor=No
       **freqs** (*array*): is a vector of frequencies the same length as filts, that
         can be used to plot the frequency response of the filters.
   """
-  return make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, 1, pad_factor=pad_factor, full_filter=full_filter, strict=strict)
+  return make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, 1, padding_size=padding_size, full_filter=full_filter, strict=strict)
 
 
-def make_erb_cos_filters_2x(signal_length, sr, n, low_lim, hi_lim, pad_factor=None, full_filter=False, strict=False):
+def make_erb_cos_filters_2x(signal_length, sr, n, low_lim, hi_lim, padding_size=None, full_filter=False, strict=False):
   """Create ERB cosine filterbank, sampled from ERB at 2x overcomplete.
 
   Returns 2*n+5 filters as column vectors
@@ -330,9 +330,9 @@ def make_erb_cos_filters_2x(signal_length, sr, n, low_lim, hi_lim, pad_factor=No
     n (int): number of filters to create
     low_lim (int): low cutoff of lowest band
     hi_lim (int): high cutoff of highest band
-    pad_factor (int, optional): If None (default), the signal will not be padded
+    padding_size (int, optional): If None (default), the signal will not be padded
       before filtering. Otherwise, the filters will be created assuming the
-      waveform signal will be padded to length pad_factor*signal_length.
+      waveform signal will be padded to length padding_size*signal_length.
     full_filter (bool, optional): If True, the complete filter that
       is ready to apply to the signal is returned. If False (default), only the first
       half of the filter is returned (likely positive terms of FFT).
@@ -350,10 +350,10 @@ def make_erb_cos_filters_2x(signal_length, sr, n, low_lim, hi_lim, pad_factor=No
       **freqs** (*array*): is a vector of frequencies the same length as filts, that
         can be used to plot the frequency response of the filters.
   """
-  return make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, 2, pad_factor=pad_factor, full_filter=full_filter, strict=strict)
+  return make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, 2, padding_size=padding_size, full_filter=full_filter, strict=strict)
 
 
-def make_erb_cos_filters_4x(signal_length, sr, n, low_lim, hi_lim, pad_factor=None, full_filter=False, strict=False):
+def make_erb_cos_filters_4x(signal_length, sr, n, low_lim, hi_lim, padding_size=None, full_filter=False, strict=False):
   """Create ERB cosine filterbank, sampled from ERB at 4x overcomplete.
 
   Returns 4*n+11 filters as column vectors
@@ -380,9 +380,9 @@ def make_erb_cos_filters_4x(signal_length, sr, n, low_lim, hi_lim, pad_factor=No
     n (int): number of filters to create
     low_lim (int): low cutoff of lowest band
     hi_lim (int): high cutoff of highest band
-    pad_factor (int, optional): If None (default), the signal will not be padded
+    padding_size (int, optional): If None (default), the signal will not be padded
       before filtering. Otherwise, the filters will be created assuming the
-      waveform signal will be padded to length pad_factor*signal_length.
+      waveform signal will be padded to length padding_size*signal_length.
     full_filter (bool, optional): If True, the complete filter that
       is ready to apply to the signal is returned. If False (default), only the first
       half of the filter is returned (likely positive terms of FFT).
@@ -400,7 +400,7 @@ def make_erb_cos_filters_4x(signal_length, sr, n, low_lim, hi_lim, pad_factor=No
       **freqs** (*array*): is a vector of frequencies the same length as filts, that
         can be used to plot the frequency response of the filters.
   """
-  return make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, 4, pad_factor=pad_factor, full_filter=full_filter, strict=strict)
+  return make_erb_cos_filters_nx(signal_length, sr, n, low_lim, hi_lim, 4, padding_size=padding_size, full_filter=full_filter, strict=strict)
 
 
 def make_erb_cos_filters(signal_length, sr, n, low_lim, hi_lim, full_filter=False, strict=False):

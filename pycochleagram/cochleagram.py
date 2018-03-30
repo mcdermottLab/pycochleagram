@@ -28,7 +28,7 @@ import pdb as ipdb
 
 
 def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
-        pad_factor=None, downsample=None, nonlinearity=None,
+        padding_size=None, downsample=None, nonlinearity=None,
         fft_mode='auto', ret_mode='envs', strict=True, **kwargs):
   """Generate the subband envelopes (i.e., the cochleagram)
   of the provided signal.
@@ -57,9 +57,9 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
      adjacent bandpass filters will overlap by 50%. 2 represents 2x overcomplete sampling;
      adjacent bandpass filters will overlap by 75%. 4 represents 4x overcomplete sampling;
      adjacent bandpass filters will overlap by 87.5%.
-    pad_factor (int, optional): If None (default), the signal will not be padded
+    padding_size (int, optional): If None (default), the signal will not be padded
       before filtering. Otherwise, the filters will be created assuming the
-      waveform signal will be padded to length pad_factor*signal_length.
+      waveform signal will be padded to length padding_size+signal_length.
     downsample (None, int, callable, optional): The `downsample` argument can
       be an integer representing the upsampling factor in polyphase resampling
       (with `sr` as the downsampling factor), a callable
@@ -127,7 +127,7 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
     erb_kwargs = {}
   # print(erb_kwargs)
   filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(batch_signal.shape[1],
-      sr, n, low_lim, hi_lim, sample_factor, pad_factor=pad_factor,
+      sr, n, low_lim, hi_lim, sample_factor, padding_size=padding_size,
       full_filter=True, strict=strict, **erb_kwargs)
 
   # utils.filtshow(freqs, filts, hz_cutoffs, use_log_x=True)
@@ -155,12 +155,12 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
 
     if ret_mode == 'envs' or ret_mode == 'all':
       temp_sb = sb.generate_subband_envelopes_fast(temp_signal_flat, filts,
-          pad_factor=pad_factor, fft_mode=fft_mode, debug_ret_all=ret_all_sb)
+          padding_size=padding_size, fft_mode=fft_mode, debug_ret_all=ret_all_sb)
     elif ret_mode == 'subband':
-      temp_sb = sb.generate_subbands(temp_signal_flat, filts, pad_factor=pad_factor,
+      temp_sb = sb.generate_subbands(temp_signal_flat, filts, padding_size=padding_size,
           fft_mode=fft_mode, debug_ret_all=ret_all_sb)
     elif ret_mode == 'analytic':
-      temp_sb = sb.generate_subbands(temp_signal_flat, filts, pad_factor=pad_factor,
+      temp_sb = sb.generate_subbands(temp_signal_flat, filts, padding_size=padding_size,
           fft_mode=fft_mode)
     else:
       raise NotImplementedError('`ret_mode` is not supported.')
@@ -191,7 +191,7 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
 
 
 def human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
-        sample_factor=2, pad_factor=None, downsample=None, nonlinearity=None,
+        sample_factor=2, padding_size=None, downsample=None, nonlinearity=None,
         fft_mode='auto', ret_mode='envs', strict=True, **kwargs):
   """Convenience function to generate the subband envelopes
   (i.e., the cochleagram) of the provided signal using sensible default
@@ -221,9 +221,9 @@ def human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
      adjacent bandpass filters will overlap by 50%. 2 represents 2x overcomplete sampling;
      adjacent bandpass filters will overlap by 75%. 4 represents 4x overcomplete sampling;
      adjacent bandpass filters will overlap by 87.5%.
-    pad_factor (int, optional): If None (default), the signal will not be padded
+    padding_size (int, optional): If None (default), the signal will not be padded
       before filtering. Otherwise, the filters will be created assuming the
-      waveform signal will be padded to length pad_factor*signal_length.
+      waveform signal will be padded to length padding_size+signal_length.
     downsample (None, int, callable, optional): The `downsample` argument can
       be an integer representing the upsampling factor in polyphase resampling
       (with `sr` as the downsampling factor), a callable
@@ -258,8 +258,8 @@ def human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
   """
   if n is None:
     n = int(np.floor(erb.freq2erb(hi_lim) - erb.freq2erb(low_lim)) - 1)
-
-  out = cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor, pad_factor,
+  print("here")
+  out = cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor, padding_size,
       downsample, nonlinearity, fft_mode, ret_mode, strict, **kwargs)
 
   return out
@@ -363,7 +363,7 @@ def invert_cochleagram_with_filterbank(cochleagram, filters, sr, target_rms=100,
 
 
 def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
-        pad_factor=None, target_rms=100, downsample=None, nonlinearity=None, n_iter=50, strict=True):
+        padding_size=None, target_rms=100, downsample=None, nonlinearity=None, n_iter=50, strict=True):
   """Generate a waveform from a cochleagram using the provided arguments to
   construct a filterbank.
 
@@ -385,9 +385,9 @@ def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
      adjacent bandpass filters will overlap by 50%. 2 represents 2x overcomplete sampling;
      adjacent bandpass filters will overlap by 75%. 4 represents 4x overcomplete sampling;
      adjacent bandpass filters will overlap by 87.5%.
-    pad_factor (int, optional): If None (default), the signal will not be padded
+    padding_size (int, optional): If None (default), the signal will not be padded
       before filtering. Otherwise, the filters will be created assuming the
-      waveform signal will be padded to length pad_factor*signal_length.
+      waveform signal will be padded to length padding_size+signal_length.
     target_rms (scalar): Target root-mean-squared value of the output, related
       to SNR, TODO: this needs to be checked
     downsample (None, int, callable, optional): If downsampling was performed on
@@ -432,7 +432,7 @@ def invert_cochleagram(cochleagram, sr, n, low_lim, hi_lim, sample_factor,
 
 # generate filterbank
   filts, hz_cutoffs, freqs = erb.make_erb_cos_filters_nx(signal_length,
-      sr, n, low_lim, hi_lim, sample_factor, pad_factor=pad_factor,
+      sr, n, low_lim, hi_lim, sample_factor, padding_size=padding_size,
       full_filter=True, strict=strict)
 
   # invert filterbank

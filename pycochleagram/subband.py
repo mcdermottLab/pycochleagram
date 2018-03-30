@@ -75,7 +75,7 @@ def reshape_signal_batch(signal):
   return out_signal
 
 
-def generate_subband_envelopes_fast(signal, filters, pad_factor=None, fft_mode='auto', debug_ret_all=False):
+def generate_subband_envelopes_fast(signal, filters, padding_size=None, fft_mode='auto', debug_ret_all=False):
   """Generate the subband envelopes (i.e., the cochleagram) of the signal by
   applying the provided filters.
 
@@ -99,11 +99,11 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None, fft_mode='
     filters (array): The filterbank, in frequency space, used to generate the
       cochleagram. This should be the full filter-set output of
       erbFilter.make_erb_cos_filters_nx, or similar.
-    pad_factor (int, optional): Factor that determines if the signal will be
+    padding_size (int, optional): Factor that determines if the signal will be
       zero-padded before generating the subbands. If this is None,
       or less than 1, no zero-padding will be used. Otherwise, zeros are added
       to the end of the input signal until is it of length
-      `pad_factor * length(signal)`. This padded region will be removed after
+      `padding_size * length(signal)`. This padded region will be removed after
       performing the subband decomposition.
     fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
       to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
@@ -117,8 +117,8 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None, fft_mode='
   # convert the signal to a canonical representation
   signal_flat = reshape_signal_canonical(signal)
 
-  if pad_factor is not None and pad_factor > 1:
-    signal_flat, padding = pad_signal(signal_flat, pad_factor)
+  if padding_size is not None and padding_size > 1:
+    signal_flat, padding = pad_signal(signal_flat, padding_size)
 
   if np.isrealobj(signal_flat):  # attempt to speed up computation with rfft
     fft_sample = utils.rfft(signal_flat, mode=fft_mode)
@@ -133,7 +133,7 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None, fft_mode='
   analytic_subbands = utils.fhilbert(subbands, mode=fft_mode)
   subband_envelopes = np.abs(analytic_subbands)
 
-  if pad_factor is not None and pad_factor > 1:
+  if padding_size is not None and padding_size > 1:
     analytic_subbands = analytic_subbands[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
     subband_envelopes = subband_envelopes[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
 
@@ -148,7 +148,7 @@ def generate_subband_envelopes_fast(signal, filters, pad_factor=None, fft_mode='
     return subband_envelopes
 
 
-def generate_subbands(signal, filters, pad_factor=None, fft_mode='auto', debug_ret_all=False):
+def generate_subbands(signal, filters, padding_size=None, fft_mode='auto', debug_ret_all=False):
   """Generate the subband decomposition of the signal by applying the provided
   filters.
 
@@ -160,11 +160,11 @@ def generate_subbands(signal, filters, pad_factor=None, fft_mode='auto', debug_r
     filters (array): The filterbank, in frequency space, used to generate the
       cochleagram. This should be the full filter-set output of
       erbFilter.make_erb_cos_filters_nx, or similar.
-    pad_factor (int, optional): Factor that determines if the signal will be
+    padding_size (int, optional): Factor that determines if the signal will be
       zero-padded before generating the subbands. If this is None,
       or less than 1, no zero-padding will be used. Otherwise, zeros are added
       to the end of the input signal until is it of length
-      `pad_factor * length(signal)`. This padded region will be removed after
+      `padding_size * length(signal)`. This padded region will be removed after
       performing the subband decomposition.
     fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
       to use for FFT-like operations. 'auto' will attempt to use pyfftw, but
@@ -176,16 +176,16 @@ def generate_subbands(signal, filters, pad_factor=None, fft_mode='auto', debug_r
       should have the same shape as `filters`.
   """
   # note: numpy defaults to row vecs
-  # if pad_factor is not None and pad_factor >= 1:
-  #   padding = signal.shape[0] * pad_factor - signal.shape[0]
+  # if padding_size is not None and padding_size >= 1:
+  #   padding = signal.shape[0] * padding_size - signal.shape[0]
   #   print('padding ', padding)
   #   signal = np.concatenate((signal, np.zeros(padding)))
 
   # convert the signal to a canonical representation
   signal_flat = reshape_signal_canonical(signal)
 
-  if pad_factor is not None and pad_factor > 1:
-    signal_flat, padding = pad_signal(signal_flat, pad_factor)
+  if padding_size is not None and padding_size > 1:
+    signal_flat, padding = pad_signal(signal_flat, padding_size)
 
   is_signal_even = signal_flat.shape[0] % 2 == 0
   if np.isrealobj(signal_flat) and is_signal_even:  # attempt to speed up computation with rfft
@@ -203,7 +203,7 @@ def generate_subbands(signal, filters, pad_factor=None, fft_mode='auto', debug_r
     subbands = filters * fft_sample
     subbands = np.real(utils.ifft(subbands, mode=fft_mode))  # operates row-wise
 
-  if pad_factor is not None and pad_factor > 1:
+  if padding_size is not None and padding_size > 1:
     subbands = subbands[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
 
   if debug_ret_all is True:
@@ -217,7 +217,7 @@ def generate_subbands(signal, filters, pad_factor=None, fft_mode='auto', debug_r
     return subbands
 
 
-def generate_analytic_subbands(signal, filters, pad_factor=None, fft_mode='auto'):
+def generate_analytic_subbands(signal, filters, padding_size=None, fft_mode='auto'):
   """Generate the analytic subbands (i.e., hilbert transform) of the signal by
     applying the provided filters.
 
@@ -230,10 +230,10 @@ def generate_analytic_subbands(signal, filters, pad_factor=None, fft_mode='auto'
     filters (array): The filterbank, in frequency space, used to generate the
       cochleagram. This should be the full filter-set output of
       erbFilter.make_erb_cos_filters_nx, or similar.
-    pad_factor (int, optional): Factor that determines if the signal will be zero-padded
+    padding_size (int, optional): Factor that determines if the signal will be zero-padded
       before generating the subbands. If this is None, or less than 1, no
       zero-padding will be used. Otherwise, zeros are added to the end of the
-      input signal until is it of length `pad_factor * length(signal)`. This
+      input signal until is it of length `padding_size * length(signal)`. This
       padded region will be removed after performing the subband
       decomposition.
     fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
@@ -249,20 +249,20 @@ def generate_analytic_subbands(signal, filters, pad_factor=None, fft_mode='auto'
   """
   signal_flat = reshape_signal_canonical(signal)
 
-  if pad_factor is not None and pad_factor > 1:
-    signal_flat, padding = pad_signal(signal_flat, pad_factor)
+  if padding_size is not None and padding_size > 1:
+    signal_flat, padding = pad_signal(signal_flat, padding_size)
 
   fft_sample = utils.fft(signal_flat, mode=fft_mode)
   subbands = filters * fft_sample
   analytic_subbands = utils.fhilbert(subbands, mode=fft_mode)
 
-  if pad_factor is not None and pad_factor > 1:
+  if padding_size is not None and padding_size > 1:
     analytic_subbands = analytic_subbands[:, :signal_flat.shape[0] - padding]  # i dont know if this is correct
 
   return analytic_subbands
 
 
-def generate_subband_envelopes(signal, filters, pad_factor=None, debug_ret_all=False):
+def generate_subband_envelopes(signal, filters, padding_size=None, debug_ret_all=False):
   """Generate the subband envelopes (i.e., the cochleagram) of the signal by
     applying the provided filters.
 
@@ -274,10 +274,10 @@ def generate_subband_envelopes(signal, filters, pad_factor=None, debug_ret_all=F
     filters (array): The filterbank, in frequency space, used to generate the
       cochleagram. This should be the full filter-set output of
       erbFilter.make_erb_cos_filters_nx, or similar.
-    pad_factor (int, optional): Factor that determines if the signal will be zero-padded
+    padding_size (int, optional): Factor that determines if the signal will be zero-padded
       before generating the subbands. If this is None, or less than 1, no
       zero-padding will be used. Otherwise, zeros are added to the end of the
-      input signal until is it of length `pad_factor * length(signal)`. This
+      input signal until is it of length `padding_size * length(signal)`. This
       padded region will be removed after performing the subband
       decomposition.
     fft_mode ({'auto', 'fftw', 'np'}, optional): Determine what implementation
@@ -289,7 +289,7 @@ def generate_subband_envelopes(signal, filters, pad_factor=None, debug_ret_all=F
     **subband_envelopes**: The subband envelopes (i.e., cochleagram) resulting from
       the subband decomposition. This should have the same shape as `filters`.
   """
-  analytic_subbands = generate_analytic_subbands(signal, filters, pad_factor=pad_factor)
+  analytic_subbands = generate_analytic_subbands(signal, filters, padding_size=padding_size)
   subband_envelopes = np.abs(analytic_subbands)
 
   if debug_ret_all is True:
@@ -327,14 +327,14 @@ def collapse_subbands(subbands, filters, fft_mode='auto'):
   return signal
 
 
-def pad_signal(signal, pad_factor, axis=0):
+def pad_signal(signal, padding_size, axis=0):
   """Pad the signal by appending zeros to the end. The padded signal has
-  length `pad_factor * length(signal)`.
+  length `padding_size * length(signal)`.
 
   Args:
     signal (array): The signal to be zero-padded.
-    pad_factor (int): Factor that determines the size of the padded signal.
-      The padded signal has length `pad_factor * length(signal)`.
+    padding_size (int): Factor that determines the size of the padded signal.
+      The padded signal has length `padding_size * length(signal)`.
     axis (int): Specifies the axis to pad; defaults to 0.
 
   Returns:
@@ -342,8 +342,7 @@ def pad_signal(signal, pad_factor, axis=0):
       **pad_signal** (*array*): The zero-padded signal.
       **padding_size** (*int*): The length of the zero-padding added to the array.
   """
-  if pad_factor is not None and pad_factor >= 1:
-    padding_size = signal.shape[axis] * pad_factor - signal.shape[axis]
+  if padding_size is not None and padding_size >= 1:
     pad_shape = list(signal.shape)
     pad_shape[axis] = padding_size
     pad_signal = np.concatenate((signal, np.zeros(pad_shape)))
