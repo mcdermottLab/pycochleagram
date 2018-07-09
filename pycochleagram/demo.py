@@ -320,7 +320,8 @@ def main(ignore_playback_warning=False, mode='rand_sound'):
     None
   """
   mode = mode.lower()
-  DEMO_PATH = '/Users/raygon/Desktop/mdLab/projects/public/pycochleagram/pycochleagram/demo_stim/'
+  from os.path import dirname, join, realpath
+  DEMO_PATH = join(dirname(realpath(__file__)), 'demo_stim')
   if mode == 'rand_sound':
     rfn = choice([os.path.join(DEMO_PATH, f)for f in os.listdir(DEMO_PATH) if f.endswith('.wav')])
     print(os.listdir(DEMO_PATH))
