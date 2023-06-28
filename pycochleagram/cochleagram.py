@@ -132,7 +132,7 @@ def cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor,
 
   # utils.filtshow(freqs, filts, hz_cutoffs, use_log_x=True)
 
-  freqs_to_plot = np.log10(freqs)
+  # freqs_to_plot = np.log10(freqs)  # remove useless variable
 
   # print(filts.shape)
   # plt.figure(figsize=(18,5))
@@ -258,7 +258,7 @@ def human_cochleagram(signal, sr, n=None, low_lim=50, hi_lim=20000,
   """
   if n is None:
     n = int(np.floor(erb.freq2erb(hi_lim) - erb.freq2erb(low_lim)) - 1)
-  print("here")
+  # print("here") # do not print
   out = cochleagram(signal, sr, n, low_lim, hi_lim, sample_factor, padding_size,
       downsample, nonlinearity, fft_mode, ret_mode, strict, **kwargs)
 
